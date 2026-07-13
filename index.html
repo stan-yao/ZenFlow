@@ -52,24 +52,26 @@ const Cloud     = ({size=16}) => <Ic size={size}><path d="M18 10h-1.26A8 8 0 1 0
 
 // ── Categories ────────────────────────────────────────────────────────────────
 const DEFAULT_CATS = [
-  {key:"design",label:"設計",   light:["#8B5CF6","#C4B5FD"],dark:["#7C3AED","#A78BFA"]},
-  {key:"demo",  label:"拆除",   light:["#EF4444","#FCA5A5"],dark:["#DC2626","#F87171"]},
-  {key:"mep",   label:"水電",   light:["#3B82F6","#93C5FD"],dark:["#2563EB","#60A5FA"]},
-  {key:"mason", label:"泥作",   light:["#92400E","#D97706"],dark:["#78350F","#B45309"]},
-  {key:"wood",  label:"木作",   light:["#D97706","#FCD34D"],dark:["#B45309","#FBB024"]},
-  {key:"paint", label:"油漆",   light:["#10B981","#6EE7B7"],dark:["#059669","#34D399"]},
-  {key:"furn",  label:"系統櫃", light:["#EC4899","#F9A8D4"],dark:["#DB2777","#F472B6"]},
-  {key:"glass", label:"玻璃",   light:["#0EA5E9","#7DD3FC"],dark:["#0284C7","#38BDF8"]},
-  {key:"deco",  label:"傢飾",   light:["#F59E0B","#FDE68A"],dark:["#D97706","#FCD34D"]},
-  {key:"soft",  label:"軟裝清潔",light:["#06B6D4","#67E8F9"],dark:["#0891B2","#22D3EE"]},
-  {key:"other", label:"其他",   light:["#6B7280","#D1D5DB"],dark:["#4B5563","#9CA3AF"]},
+  {key:"design",    label:"設計",   light:["#8B5CF6","#C4B5FD"],dark:["#7C3AED","#A78BFA"]},
+  {key:"demo",      label:"拆除",   light:["#EF4444","#FCA5A5"],dark:["#DC2626","#F87171"]},
+  {key:"mason",     label:"泥作",   light:["#A16207","#FCD34D"],dark:["#92400E","#D97706"]},
+  {key:"mep",       label:"水電",   light:["#2563EB","#93C5FD"],dark:["#1D4ED8","#60A5FA"]},
+  {key:"wood",      label:"木作",   light:["#B45309","#FDE68A"],dark:["#92400E","#FBB024"]},
+  {key:"iron",      label:"鐵件",   light:["#475569","#94A3B8"],dark:["#334155","#64748B"]},
+  {key:"glass",     label:"玻璃",   light:["#0284C7","#7DD3FC"],dark:["#0369A1","#38BDF8"]},
+  {key:"paint",     label:"油漆",   light:["#059669","#6EE7B7"],dark:["#047857","#34D399"]},
+  {key:"furn",      label:"系統櫃", light:["#DB2777","#F9A8D4"],dark:["#BE185D","#F472B6"]},
+  {key:"partition", label:"輕隔間", light:["#EA580C","#FDBA74"],dark:["#C2410C","#FB923C"]},
+  {key:"light",     label:"燈具",   light:["#CA8A04","#FEF08A"],dark:["#A16207","#FDE047"]},
+  {key:"sign",      label:"招牌",   light:["#E11D48","#FCA5A5"],dark:["#BE123C","#FB7185"]},
+  {key:"floor",     label:"地坪",   light:["#78716C","#D6D3D1"],dark:["#57534E","#A8A29E"]},
+  {key:"clean",     label:"清潔",   light:["#0D9488","#99F6E4"],dark:["#0F766E","#5EEAD4"]},
+  {key:"soft",      label:"傢飾軟裝",light:["#9333EA","#E9D5FF"],dark:["#7E22CE","#C084FC"]},
 ];
-const PRESET_COLORS = [
-  ["#EF4444","#FCA5A5"],["#F97316","#FDBA74"],["#EAB308","#FDE047"],
-  ["#22C55E","#86EFAC"],["#14B8A6","#5EEAD4"],["#3B82F6","#93C5FD"],
-  ["#8B5CF6","#C4B5FD"],["#EC4899","#F9A8D4"],["#F43F5E","#FDA4AF"],
-  ["#6B7280","#D1D5DB"],["#78350F","#D97706"],["#0E7490","#67E8F9"],
-];
+const lightenHex = (hex, t=0.45) => {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return '#'+[r,g,b].map(v=>Math.round(v+(255-v)*t).toString(16).padStart(2,'0')).join('');
+};
 
 // ── Theme ─────────────────────────────────────────────────────────────────────
 const T = {
@@ -85,6 +87,14 @@ const addDays = (s,n) => { const d=parseISO(s); d.setDate(d.getDate()+n); return
 const diffDays = (a,b) => Math.round((parseISO(b)-parseISO(a))/86400000);
 const todayISO = () => toISO(new Date());
 const uid = () => Math.random().toString(36).slice(2,10);
+
+// 用 Canvas 量實際文字寬度
+let _mctx = null;
+const measureText = text => {
+  if (!_mctx) _mctx = document.createElement("canvas").getContext("2d");
+  _mctx.font = "600 11px Inter, system-ui, sans-serif";
+  return _mctx.measureText(text).width;
+};
 
 // ── Canvas Export ─────────────────────────────────────────────────────────────
 function rrect(ctx,x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();}
@@ -424,7 +434,7 @@ function GanttPlanner() {
                 const cat=catOf(t.category);const cols=dark?cat.dark:cat.light;
                 const left=diffDays(minD,t.start)*dayWidth;const w=(diffDays(t.start,t.end)+1)*dayWidth;
                 const top=HEAD_H+idx*ROW_H+(ROW_H-BAR_H)/2;const prog=t.progress||0;
-                const shortBar=w<t.name.length*10+24;
+                const shortBar=w<measureText(t.name)+24;
                 return(
                   <div key={t.id}>
                     <div className="bar-row" style={{position:"absolute",left:0,top:HEAD_H+idx*ROW_H,width:timelineWidth,height:ROW_H,borderBottom:`1px solid ${tk.border}`,zIndex:1}}/>
@@ -467,42 +477,49 @@ function GanttPlanner() {
 
 // ── CatModal ──────────────────────────────────────────────────────────────────
 function CatModal({tk,dark,customCats,setCustomCats,onClose}){
-  const [label,setLabel]=useState("");const [color,setColor]=useState(PRESET_COLORS[0]);const [err,setErr]=useState(false);
-  const add=()=>{if(!label.trim()){setErr(true);return;}setCustomCats(c=>[...c,{key:"custom_"+uid(),label:label.trim(),light:color,dark:color}]);setLabel("");setErr(false);};
+  const [label,setLabel]=useState("");
+  const [pickedColor,setPickedColor]=useState("#3B82F6");
+  const [err,setErr]=useState(false);
+  const lightCol=[pickedColor,lightenHex(pickedColor)];
+  const add=()=>{if(!label.trim()){setErr(true);return;}setCustomCats(c=>[...c,{key:"custom_"+uid(),label:label.trim(),light:lightCol,dark:lightCol}]);setLabel("");setErr(false);};
+  const pill={display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:20,border:`1px solid ${tk.border}`,fontSize:12,color:tk.textMid};
   return(
     <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.35)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:55,padding:16}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:tk.bg,border:`1px solid ${tk.border}`,borderRadius:14,padding:20,maxWidth:360,width:"100%",maxHeight:"80vh",overflowY:"auto"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:tk.bg,border:`1px solid ${tk.border}`,borderRadius:14,padding:20,maxWidth:380,width:"100%",maxHeight:"82vh",overflowY:"auto"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
           <span style={{fontWeight:600,fontSize:15}}>管理分類</span>
           <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",color:tk.textDim,display:"flex"}}><X size={18}/></button>
         </div>
-        <p style={{fontSize:11,color:tk.textDim,fontFamily:"'JetBrains Mono',monospace",marginBottom:8}}>預設分類</p>
-        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:16}}>{DEFAULT_CATS.map(c=>(
-          <span key={c.key} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 9px",borderRadius:20,border:`1px solid ${tk.border}`,fontSize:12,color:tk.textMid}}>
-            <span style={{width:7,height:7,borderRadius:2,background:dark?c.dark[0]:c.light[0],display:"inline-block"}}/>{c.label}
-          </span>
-        ))}</div>
-        {customCats.length>0&&(<div style={{marginBottom:16}}>
-          <p style={{fontSize:11,color:tk.textDim,fontFamily:"'JetBrains Mono',monospace",marginBottom:8}}>自訂分類</p>
-          {customCats.map(c=>(
-            <div key={c.key} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:tk.surface,marginBottom:4}}>
-              <span style={{width:10,height:10,borderRadius:3,background:c.light[0],flexShrink:0}}/><span style={{flex:1,fontSize:13}}>{c.label}</span>
-              <button onClick={()=>setCustomCats(cs=>cs.filter(x=>x.key!==c.key))} style={{background:"transparent",border:"none",cursor:"pointer",color:tk.textDim,display:"flex"}}><Trash2 size={13}/></button>
-            </div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:18}}>
+          {DEFAULT_CATS.map(c=>(
+            <span key={c.key} style={pill}>
+              <span style={{width:7,height:7,borderRadius:2,background:dark?c.dark[0]:c.light[0],display:"inline-block",flexShrink:0}}/>{c.label}
+            </span>
           ))}
-        </div>)}
-        <p style={{fontSize:11,color:tk.textDim,fontFamily:"'JetBrains Mono',monospace",marginBottom:8}}>新增自訂分類</p>
-        <input value={label} onChange={e=>{setLabel(e.target.value);setErr(false);}} placeholder="分類名稱"
-          style={{width:"100%",padding:"8px 12px",border:`1px solid ${err?"#EF4444":tk.border}`,borderRadius:8,fontSize:13,background:tk.surface,color:tk.text,outline:"none",marginBottom:8,fontFamily:"inherit"}}/>
-        <p style={{fontSize:11,color:tk.textDim,marginBottom:6}}>選擇顏色</p>
-        <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:12}}>{PRESET_COLORS.map((c,i)=>(
-          <button key={i} onClick={()=>setColor(c)} style={{width:26,height:26,borderRadius:7,background:c[0],border:color===c?`2.5px solid ${tk.text}`:"2.5px solid transparent",cursor:"pointer",padding:0}}/>
-        ))}</div>
-        <div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 12px",background:tk.surface,borderRadius:8,marginBottom:14}}>
-          <span style={{display:"inline-block",width:28,height:16,borderRadius:8,background:`linear-gradient(90deg,${color[0]},${color[1]})`}}/>
-          <span style={{fontSize:12,color:tk.textMid}}>{label||"分類名稱預覽"}</span>
+          {customCats.map(c=>(
+            <span key={c.key} style={{...pill,paddingRight:4}}>
+              <span style={{width:7,height:7,borderRadius:2,background:c.light[0],display:"inline-block",flexShrink:0}}/>{c.label}
+              <button onClick={()=>setCustomCats(cs=>cs.filter(x=>x.key!==c.key))}
+                style={{background:"transparent",border:"none",cursor:"pointer",color:tk.textDim,display:"flex",alignItems:"center",padding:"0 2px",marginLeft:2,fontSize:14,lineHeight:1}}>×</button>
+            </span>
+          ))}
         </div>
-        <button onClick={add} style={{width:"100%",padding:"9px",background:dark?"#8B5CF6":"#1A1A1A",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Plus size={14}/>新增分類</button>
+        <div style={{borderTop:`1px solid ${tk.border}`,paddingTop:14}}>
+          <p style={{fontSize:11,color:tk.textDim,fontFamily:"'JetBrains Mono',monospace",marginBottom:8}}>新增自訂分類</p>
+          <div style={{display:"flex",gap:8,marginBottom:10}}>
+            <input value={label} onChange={e=>{setLabel(e.target.value);setErr(false);}} placeholder="分類名稱"
+              style={{flex:1,padding:"8px 12px",border:`1px solid ${err?"#EF4444":tk.border}`,borderRadius:8,fontSize:13,background:tk.surface,color:tk.text,outline:"none",fontFamily:"inherit"}}/>
+            <input type="color" value={pickedColor} onChange={e=>setPickedColor(e.target.value)}
+              style={{width:40,height:38,borderRadius:8,border:`1px solid ${tk.border}`,cursor:"pointer",padding:2,background:"transparent"}}/>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:14}}>
+            <span style={pill}>
+              <span style={{width:7,height:7,borderRadius:2,background:pickedColor,display:"inline-block"}}/>{label||"名稱預覽"}
+            </span>
+            <span style={{fontSize:11,color:tk.textDim}}>← 預覽</span>
+          </div>
+          <button onClick={add} style={{width:"100%",padding:"9px",background:dark?"#5B82E8":"#002FA7",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Plus size={14}/>新增分類</button>
+        </div>
       </div>
     </div>
   );
