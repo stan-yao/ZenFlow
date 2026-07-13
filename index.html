@@ -424,6 +424,7 @@ function GanttPlanner() {
                 const cat=catOf(t.category);const cols=dark?cat.dark:cat.light;
                 const left=diffDays(minD,t.start)*dayWidth;const w=(diffDays(t.start,t.end)+1)*dayWidth;
                 const top=HEAD_H+idx*ROW_H+(ROW_H-BAR_H)/2;const prog=t.progress||0;
+                const shortBar=w<t.name.length*6.5+24;
                 return(
                   <div key={t.id}>
                     <div className="bar-row" style={{position:"absolute",left:0,top:HEAD_H+idx*ROW_H,width:timelineWidth,height:ROW_H,borderBottom:`1px solid ${tk.border}`,zIndex:1}}/>
@@ -431,10 +432,15 @@ function GanttPlanner() {
                       onMouseDown={makeDrag(t,"move")}
                       style={{position:"absolute",left,top,width:w,height:BAR_H,borderRadius:BAR_H/2,background:`linear-gradient(90deg,${cols[0]},${cols[1]})`,zIndex:10,cursor:"grab",boxShadow:dark?`0 1px 8px ${cols[0]}44`:`0 1px 4px ${cols[0]}38`,display:"flex",alignItems:"center",overflow:"hidden",userSelect:"none"}}>
                       {prog>0&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${prog}%`,background:"rgba(255,255,255,0.25)",borderRadius:BAR_H/2}}/>}
-                      {w>50&&<span style={{position:"relative",zIndex:1,fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.95)",paddingLeft:12,paddingRight:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:w-16,textShadow:"0 1px 2px rgba(0,0,0,0.2)",userSelect:"none",pointerEvents:"none"}}>{t.name}</span>}
+                      {!shortBar&&<span style={{position:"relative",zIndex:1,fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.95)",paddingLeft:12,paddingRight:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:w-16,textShadow:"0 1px 2px rgba(0,0,0,0.2)",userSelect:"none",pointerEvents:"none"}}>{t.name}</span>}
                       <div onMouseDown={makeDrag(t,"l")} style={{position:"absolute",left:0,top:0,bottom:0,width:12,cursor:"ew-resize",zIndex:2}}/>
                       <div onMouseDown={makeDrag(t,"r")} style={{position:"absolute",right:0,top:0,bottom:0,width:12,cursor:"ew-resize",zIndex:2}}/>
                     </div>
+                    {shortBar&&(
+                      <div style={{position:"absolute",left:left+w+6,top,height:BAR_H,display:"flex",alignItems:"center",zIndex:8,pointerEvents:"none"}}>
+                        <span style={{fontSize:11,fontWeight:500,color:tk.text,whiteSpace:"nowrap",userSelect:"none",opacity:.85}}>{t.name}</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
