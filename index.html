@@ -424,7 +424,7 @@ function GanttPlanner() {
                 const cat=catOf(t.category);const cols=dark?cat.dark:cat.light;
                 const left=diffDays(minD,t.start)*dayWidth;const w=(diffDays(t.start,t.end)+1)*dayWidth;
                 const top=HEAD_H+idx*ROW_H+(ROW_H-BAR_H)/2;const prog=t.progress||0;
-                const shortBar=w<t.name.length*6.5+24;
+                const shortBar=w<t.name.length*10+24;
                 return(
                   <div key={t.id}>
                     <div className="bar-row" style={{position:"absolute",left:0,top:HEAD_H+idx*ROW_H,width:timelineWidth,height:ROW_H,borderBottom:`1px solid ${tk.border}`,zIndex:1}}/>
