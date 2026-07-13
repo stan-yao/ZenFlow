@@ -243,28 +243,34 @@ function GanttPlanner() {
   const saveTask=task=>{if(editingTaskId==="new")setTasks(t=>[...t,{...task,id:uid()}]);else setTasks(t=>t.map(x=>x.id===editingTaskId?{...x,...task}:x));closeForm();};
   const deleteTask=id=>{setTasks(t=>t.filter(x=>x.id!==id));setConfirmId(null);closeForm();};
 
-  const startDrag=(e,task,mode)=>{
-    e.stopPropagation(); e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    dragRef.current={id:task.id,mode,startX:e.clientX,origStart:task.start,origEnd:task.end,last:null,moved:false};
+  const makeDrag = (task, mode) => e => {
+    if (e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const sx = e.clientX, os = task.start, oe = task.end;
+    let last = null, moved = false;
+    const mv = me => {
+      const d = Math.round((me.clientX - sx) / dayWidth);
+      if (d === last) return; last = d; if (d !== 0) moved = true;
+      setProjects(p => {
+        const proj = p[activeId]; if (!proj) return p;
+        const newTasks = (proj.tasks || []).map(x => {
+          if (x.id !== task.id) return x;
+          if (mode === "move") return {...x, start: addDays(os, d), end: addDays(oe, d)};
+          if (mode === "l") { const ns = addDays(os, d); return diffDays(ns, x.end) >= 0 ? {...x, start: ns} : x; }
+          if (mode === "r") { const ne = addDays(oe, d); return diffDays(x.start, ne) >= 0 ? {...x, end: ne} : x; }
+          return x;
+        });
+        return {...p, [activeId]: {...proj, tasks: newTasks, updatedAt: new Date().toISOString()}};
+      });
+    };
+    const up = () => {
+      document.removeEventListener("mousemove", mv);
+      document.removeEventListener("mouseup", up);
+      if (!moved && mode === "move") openEdit(task.id);
+    };
+    document.addEventListener("mousemove", mv);
+    document.addEventListener("mouseup", up);
   };
-  const onDragMove=useCallback(e=>{
-    const g=dragRef.current; if(!g)return;
-    const delta=Math.round((e.clientX-g.startX)/dayWidth);
-    if(delta===g.last)return; g.last=delta; g.moved=true;
-    setTasks(ts=>ts.map(t=>{
-      if(t.id!==g.id)return t;
-      if(g.mode==="move")return{...t,start:addDays(g.origStart,delta),end:addDays(g.origEnd,delta)};
-      if(g.mode==="l"){const ns=addDays(g.origStart,delta);return diffDays(ns,t.end)>=0?{...t,start:ns}:t;}
-      if(g.mode==="r"){const ne=addDays(g.origEnd,delta);return diffDays(t.start,ne)>=0?{...t,end:ne}:t;}
-      return t;
-    }));
-  },[dayWidth]);
-  const endDrag=useCallback((e,taskId)=>{
-    const g=dragRef.current;
-    if(g&&!g.moved&&g.mode==="move") openEdit(taskId);
-    dragRef.current=null;
-  },[]);
 
   const projectList=Object.values(projects).sort((a,b)=>b.updatedAt>a.updatedAt?1:-1);
 
@@ -422,15 +428,12 @@ function GanttPlanner() {
                   <div key={t.id}>
                     <div className="bar-row" style={{position:"absolute",left:0,top:HEAD_H+idx*ROW_H,width:timelineWidth,height:ROW_H,borderBottom:`1px solid ${tk.border}`,zIndex:1}}/>
                     <div
-                      onPointerDown={e=>startDrag(e,t,"move")}
-                      onPointerMove={onDragMove}
-                      onPointerUp={e=>endDrag(e,t.id)}
-                      style={{position:"absolute",left,top,width:w,height:BAR_H,borderRadius:BAR_H/2,background:`linear-gradient(90deg,${cols[0]},${cols[1]})`,zIndex:10,cursor:"grab",boxShadow:dark?`0 1px 8px ${cols[0]}44`:`0 1px 4px ${cols[0]}38`,display:"flex",alignItems:"center",overflow:"hidden",userSelect:"none"}}
-                      onMouseEnter={e=>e.currentTarget.style.opacity=".85"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                      onMouseDown={makeDrag(t,"move")}
+                      style={{position:"absolute",left,top,width:w,height:BAR_H,borderRadius:BAR_H/2,background:`linear-gradient(90deg,${cols[0]},${cols[1]})`,zIndex:10,cursor:"grab",boxShadow:dark?`0 1px 8px ${cols[0]}44`:`0 1px 4px ${cols[0]}38`,display:"flex",alignItems:"center",overflow:"hidden",userSelect:"none"}}>
                       {prog>0&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${prog}%`,background:"rgba(255,255,255,0.25)",borderRadius:BAR_H/2}}/>}
                       {w>50&&<span style={{position:"relative",zIndex:1,fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.95)",paddingLeft:12,paddingRight:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:w-16,textShadow:"0 1px 2px rgba(0,0,0,0.2)",userSelect:"none",pointerEvents:"none"}}>{t.name}</span>}
-                      <div onPointerDown={e=>startDrag(e,t,"l")} onPointerMove={onDragMove} onPointerUp={e=>{dragRef.current=null;}} style={{position:"absolute",left:0,top:0,bottom:0,width:12,cursor:"ew-resize",zIndex:2}}/>
-                      <div onPointerDown={e=>startDrag(e,t,"r")} onPointerMove={onDragMove} onPointerUp={e=>{dragRef.current=null;}} style={{position:"absolute",right:0,top:0,bottom:0,width:12,cursor:"ew-resize",zIndex:2}}/>
+                      <div onMouseDown={makeDrag(t,"l")} style={{position:"absolute",left:0,top:0,bottom:0,width:12,cursor:"ew-resize",zIndex:2}}/>
+                      <div onMouseDown={makeDrag(t,"r")} style={{position:"absolute",right:0,top:0,bottom:0,width:12,cursor:"ew-resize",zIndex:2}}/>
                     </div>
                   </div>
                 );
