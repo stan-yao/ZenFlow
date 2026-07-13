@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>工期甘特圖</title>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <!-- React + Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>*{margin:0;padding:0;box-sizing:border-box;}body{overflow:hidden;}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ── Firebase 初始化 ───────────────────────────────────────────────────────────
+firebase.initializeApp({
+  apiKey: "AIzaSyB1f4c0-m_uapAqoUhnVIIG5htUs45QVTU",
+  authDomain: "sentences-d12f3.firebaseapp.com",
+  projectId: "sentences-d12f3",
+  storageBucket: "sentences-d12f3.firebasestorage.app",
+  messagingSenderId: "117935388501",
+  appId: "1:117935388501:web:5aa84e92227dc9dfb2a1dc"
+});
+const db = firebase.firestore();
+// 甘特圖資料放在獨立的 collection，不影響原本網站
+const PROJ_COL  = "gantt-projects";
+const CONF_DOC  = db.collection("gantt-settings").doc("default");
+
+// ── SVG Icons ─────────────────────────────────────────────────────────────────
+const Ic = ({size=16,children,style={}}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"middle",...style}}>{children}</svg>
+);
+const Plus      = ({size=16}) => <Ic size={size}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Ic>;
+const Minus     = ({size=16}) => <Ic size={size}><line x1="5" y1="12" x2="19" y2="12"/></Ic>;
+const X         = ({size=16}) => <Ic size={size}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Ic>;
+const Trash2    = ({size=16}) => <Ic size={size}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></Ic>;
+const Check     = ({size=16}) => <Ic size={size}><polyline points="20 6 9 17 4 12"/></Ic>;
+const Moon      = ({size=16}) => <Ic size={size}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></Ic>;
+const Sun       = ({size=16}) => <Ic size={size}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></Ic>;
+const FolderOpen= ({size=16}) => <Ic size={size}><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="2" y1="10" x2="22" y2="10"/></Ic>;
+const Folder    = ({size=16}) => <Ic size={size}><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></Ic>;
+const Settings  = ({size=16}) => <Ic size={size}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></Ic>;
+const Download  = ({size=16}) => <Ic size={size}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></Ic>;
+const Pencil    = ({size=16}) => <Ic size={size}><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></Ic>;
+const Cloud     = ({size=16}) => <Ic size={size}><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></Ic>;
+
+// ── Categories ────────────────────────────────────────────────────────────────
+const DEFAULT_CATS = [
+  {key:"design",label:"設計",   light:["#8B5CF6","#C4B5FD"],dark:["#7C3AED","#A78BFA"]},
+  {key:"demo",  label:"拆除",   light:["#EF4444","#FCA5A5"],dark:["#DC2626","#F87171"]},
+  {key:"mep",   label:"水電",   light:["#3B82F6","#93C5FD"],dark:["#2563EB","#60A5FA"]},
+  {key:"mason", label:"泥作",   light:["#92400E","#D97706"],dark:["#78350F","#B45309"]},
+  {key:"wood",  label:"木作",   light:["#D97706","#FCD34D"],dark:["#B45309","#FBB024"]},
+  {key:"paint", label:"油漆",   light:["#10B981","#6EE7B7"],dark:["#059669","#34D399"]},
+  {key:"furn",  label:"系統櫃", light:["#EC4899","#F9A8D4"],dark:["#DB2777","#F472B6"]},
+  {key:"glass", label:"玻璃",   light:["#0EA5E9","#7DD3FC"],dark:["#0284C7","#38BDF8"]},
+  {key:"deco",  label:"傢飾",   light:["#F59E0B","#FDE68A"],dark:["#D97706","#FCD34D"]},
+  {key:"soft",  label:"軟裝清潔",light:["#06B6D4","#67E8F9"],dark:["#0891B2","#22D3EE"]},
+  {key:"other", label:"其他",   light:["#6B7280","#D1D5DB"],dark:["#4B5563","#9CA3AF"]},
+];
+const PRESET_COLORS = [
+  ["#EF4444","#FCA5A5"],["#F97316","#FDBA74"],["#EAB308","#FDE047"],
+  ["#22C55E","#86EFAC"],["#14B8A6","#5EEAD4"],["#3B82F6","#93C5FD"],
+  ["#8B5CF6","#C4B5FD"],["#EC4899","#F9A8D4"],["#F43F5E","#FDA4AF"],
+  ["#6B7280","#D1D5DB"],["#78350F","#D97706"],["#0E7490","#67E8F9"],
+];
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+const T = {
+  light:{bg:"#FFFFFF",surface:"#F7F7F6",border:"#E8E8E6",text:"#1A1A1A",textMid:"#6B6B6B",textDim:"#9B9A97",today:"#EB5757",todayBg:"rgba(235,87,87,0.05)",weekend:"rgba(0,0,0,0.022)",headBg:"#FFFFFF",rowHover:"rgba(0,0,0,0.025)",tagBg:"#F0F0EE"},
+  dark: {bg:"#191919",surface:"#252525",border:"#373737",text:"#EFEFEF",textMid:"#A8A8A5",textDim:"#6B6B68",today:"#FF6B6B",todayBg:"rgba(255,107,107,0.06)",weekend:"rgba(255,255,255,0.02)",headBg:"#191919",rowHover:"rgba(255,255,255,0.03)",tagBg:"#2E2E2E"},
+};
+
+// ── Date utils ────────────────────────────────────────────────────────────────
+const pad = n => String(n).padStart(2,"0");
+const toISO = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseISO = s => { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (s,n) => { const d=parseISO(s); d.setDate(d.getDate()+n); return toISO(d); };
+const diffDays = (a,b) => Math.round((parseISO(b)-parseISO(a))/86400000);
+const todayISO = () => toISO(new Date());
+const uid = () => Math.random().toString(36).slice(2,10);
+
+// ── Canvas Export ─────────────────────────────────────────────────────────────
+function rrect(ctx,x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();}
+function exportJPG({sorted,allCats,minD,dayWidth,projectName,dark}){
+  const SIDE=184,DW=Math.max(dayWidth,18),RH=44,HH=72,BAR_H=26;
+  const tk=dark?T.dark:T.light;
+  const totalD=sorted.length?diffDays(minD,sorted.reduce((m,t)=>t.end>m?t.end:m,sorted[0].end))+8:40;
+  const W=SIDE+totalD*DW+16,H=HH+sorted.length*RH+32;
+  const cv=document.createElement("canvas");cv.width=W*2;cv.height=H*2;
+  const ctx=cv.getContext("2d");ctx.scale(2,2);
+  ctx.fillStyle=tk.bg;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=tk.text;ctx.font="bold 16px -apple-system,sans-serif";ctx.fillText(projectName,14,26);
+  ctx.fillStyle=tk.textDim;ctx.font="10px 'Courier New',monospace";ctx.fillText("匯出日期："+todayISO(),14,42);
+  ctx.fillStyle=tk.border;ctx.fillRect(SIDE,0,1,H);
+  ctx.fillStyle=tk.surface;ctx.fillRect(0,HH-30,W,30);
+  ctx.fillStyle=tk.border;ctx.fillRect(0,HH-30,W,1);ctx.fillRect(0,HH,W,1);
+  let mx=SIDE,months=[];
+  for(let i=0;i<totalD;i++){const d=parseISO(addDays(minD,i));const lbl=`${d.getFullYear()}/${d.getMonth()+1}`;if(!months.length||months[months.length-1].lbl!==lbl)months.push({lbl,x:mx,count:1});else months[months.length-1].count++;mx+=DW;}
+  months.forEach(m=>{ctx.fillStyle=tk.border;ctx.fillRect(m.x,HH-30,1,30);ctx.fillStyle=tk.text;ctx.font="bold 10px -apple-system,sans-serif";ctx.fillText(m.lbl,m.x+5,HH-18);});
+  for(let i=0;i<totalD;i++){const d=parseISO(addDays(minD,i));const x=SIDE+i*DW;const we=d.getDay()===0||d.getDay()===6;const isTd=addDays(minD,i)===todayISO();if(we){ctx.fillStyle=tk.weekend;ctx.fillRect(x,HH,DW,H-HH);}ctx.fillStyle=isTd?tk.today:(we?tk.textDim:tk.textMid);ctx.font=(isTd?"bold ":"")+"9px 'Courier New',monospace";ctx.textAlign="center";ctx.fillText(d.getDate(),x+DW/2,HH-4);ctx.textAlign="left";}
+  const ti=diffDays(minD,todayISO());if(ti>=0&&ti<totalD){ctx.fillStyle=tk.today;ctx.globalAlpha=.6;ctx.fillRect(SIDE+ti*DW+DW/2-.5,HH,1,H-HH);ctx.globalAlpha=1;}
+  sorted.forEach((task,idx)=>{
+    const y=HH+idx*RH;ctx.fillStyle=tk.border;ctx.fillRect(0,y+RH,W,1);
+    ctx.save();ctx.beginPath();ctx.rect(4,y,SIDE-12,RH);ctx.clip();
+    const cat=allCats.find(c=>c.key===task.category)||allCats[allCats.length-1];
+    ctx.fillStyle=(dark?cat.dark:cat.light)[0];ctx.fillRect(6,y+12,3,20);
+    ctx.fillStyle=tk.text;ctx.font="500 12px -apple-system,sans-serif";ctx.fillText(task.name,14,y+RH/2+1);
+    ctx.fillStyle=tk.textDim;ctx.font="9px 'Courier New',monospace";ctx.fillText((diffDays(task.start,task.end)+1)+"天",14,y+RH/2+13);ctx.restore();
+    const cols=dark?cat.dark:cat.light;const bx=SIDE+diffDays(minD,task.start)*DW;const bw=Math.max((diffDays(task.start,task.end)+1)*DW,6);const by=y+(RH-BAR_H)/2;
+    const grad=ctx.createLinearGradient(bx,0,bx+bw,0);grad.addColorStop(0,cols[0]);grad.addColorStop(1,cols[1]);ctx.fillStyle=grad;rrect(ctx,bx,by,bw,BAR_H,BAR_H/2);ctx.fill();
+    if(task.progress>0){ctx.fillStyle="rgba(255,255,255,0.25)";rrect(ctx,bx,by,bw*task.progress/100,BAR_H,BAR_H/2);ctx.fill();}
+    if(bw>48){ctx.save();ctx.beginPath();ctx.rect(bx+8,by,bw-16,BAR_H);ctx.clip();ctx.fillStyle="rgba(255,255,255,0.92)";ctx.font="bold 10px -apple-system,sans-serif";ctx.shadowColor="rgba(0,0,0,0.2)";ctx.shadowBlur=2;ctx.fillText(task.name,bx+12,by+BAR_H/2+4);ctx.restore();}
+  });
+  const a=document.createElement("a");a.download=`${projectName}-工期表.jpg`;a.href=cv.toDataURL("image/jpeg",.95);a.click();
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
+function GanttPlanner() {
+  const [dark,setDark]=useState(false);
+  const [ready,setReady]=useState(false);
+  const [loading,setLoading]=useState(true);
+  const [saveStatus,setSaveStatus]=useState("");
+  const [projects,setProjects]=useState({});
+  const [activeId,setActiveId]=useState(null);
+  const [dayWidth,setDayWidth]=useState(window.innerWidth<640?22:32);
+  const [showProjects,setShowProjects]=useState(false);
+  const [showCatModal,setShowCatModal]=useState(false);
+  const [showForm,setShowForm]=useState(false);
+  const [editingTaskId,setEditingTaskId]=useState(null);
+  const [confirmId,setConfirmId]=useState(null);
+  const [renamingId,setRenamingId]=useState(null);
+  const scrollRef=useRef(null);
+  const dragRef=useRef(null);
+  const saveTimer=useRef(null);
+  const tk=dark?T.dark:T.light;
+
+  const proj=projects[activeId]||{name:"未命名專案",tasks:[],customCats:[]};
+  const {name:projectName,tasks=[],customCats=[]}=proj;
+  const allCats=[...DEFAULT_CATS,...customCats];
+  const catOf=k=>allCats.find(c=>c.key===k)||allCats[allCats.length-1];
+
+  // ── 從 Firebase 載入 ──
+  useEffect(()=>{
+    (async()=>{
+      try{
+        const [projSnap,confSnap]=await Promise.all([
+          db.collection(PROJ_COL).get(),
+          CONF_DOC.get()
+        ]);
+        let projs={};
+        projSnap.forEach(doc=>{ projs[doc.id]={id:doc.id,...doc.data()}; });
+        if(!Object.keys(projs).length){
+          const id=uid();
+          projs={[id]:{id,name:"未命名專案",tasks:[],customCats:[],updatedAt:new Date().toISOString()}};
+        }
+        const conf=confSnap.exists?confSnap.data():{};
+        if(conf.dark!==undefined) setDark(conf.dark);
+        const aid=(conf.activeId&&projs[conf.activeId])?conf.activeId:Object.keys(projs)[0];
+        setProjects(projs); setActiveId(aid);
+      }catch(e){
+        console.error("Firebase 載入失敗",e);
+        const id=uid();
+        setProjects({[id]:{id,name:"未命名專案",tasks:[],customCats:[],updatedAt:new Date().toISOString()}});
+        setActiveId(id);
+      }finally{ setLoading(false); setReady(true); }
+    })();
+  },[]);
+
+  // ── 儲存目前專案到 Firebase ──
+  const activeJson=activeId&&projects[activeId]?JSON.stringify(projects[activeId]):null;
+  useEffect(()=>{
+    if(!ready||!activeId||!activeJson)return;
+    setSaveStatus("儲存中…");
+    clearTimeout(saveTimer.current);
+    saveTimer.current=setTimeout(async()=>{
+      try{
+        const {id,...data}=JSON.parse(activeJson);
+        await db.collection(PROJ_COL).doc(activeId).set(data);
+        setSaveStatus("☁ 已同步");
+        setTimeout(()=>setSaveStatus(""),2500);
+      }catch{ setSaveStatus("⚠ 儲存失敗"); }
+    },800);
+  },[activeJson,ready]);
+
+  // ── 儲存設定（active 專案 + 深淺色）──
+  useEffect(()=>{
+    if(!ready||!activeId)return;
+    CONF_DOC.set({activeId,dark}).catch(()=>{});
+  },[activeId,dark,ready]);
+
+  // helpers
+  const updProj=upd=>{if(!activeId)return;setProjects(p=>({...p,[activeId]:{...p[activeId],...upd,updatedAt:new Date().toISOString()}}));};
+  const setProjectName=n=>updProj({name:n});
+  const setTasks=fn=>updProj({tasks:typeof fn==="function"?fn(tasks):fn});
+  const setCustomCats=fn=>updProj({customCats:typeof fn==="function"?fn(customCats):fn});
+
+  const createProject=()=>{
+    const id=uid();
+    const np={id,name:"新專案",tasks:[],customCats:[],updatedAt:new Date().toISOString()};
+    setProjects(p=>({...p,[id]:np}));
+    setActiveId(id);
+    setTimeout(()=>setRenamingId(id),80);
+  };
+  const deleteProject=async id=>{
+    const keys=Object.keys(projects);if(keys.length<=1)return;
+    setProjects(p=>{const n={...p};delete n[id];return n;});
+    if(activeId===id)setActiveId(keys.find(k=>k!==id));
+    try{ await db.collection(PROJ_COL).doc(id).delete(); }catch{}
+  };
+
+  // timeline derived
+  const today=todayISO();
+  const sorted=[...tasks].sort((a,b)=>a.start===b.start?(a.end<b.end?-1:1):(a.start<b.start?-1:1));
+  let minD=today,maxD=addDays(today,30);
+  if(tasks.length){minD=tasks.reduce((m,t)=>t.start<m?t.start:m,tasks[0].start);maxD=tasks.reduce((m,t)=>t.end>m?t.end:m,tasks[0].end);}
+  minD=addDays(minD,-3);maxD=addDays(maxD,6);
+  const totalDays=diffDays(minD,maxD)+1;
+  const days=Array.from({length:totalDays},(_,i)=>addDays(minD,i));
+  const months=[];
+  days.forEach(d=>{const dt=parseISO(d);const lbl=`${dt.getFullYear()}年${dt.getMonth()+1}月`;if(months.length&&months[months.length-1].label===lbl)months[months.length-1].count++;else months.push({label:lbl,count:1});});
+  const spanDays=arr=>{if(!arr.length)return 0;const s=arr.reduce((m,t)=>t.start<m?t.start:m,arr[0].start);const e=arr.reduce((m,t)=>t.end>m?t.end:m,arr[0].end);return diffDays(s,e)+1;};
+  const desDays=spanDays(tasks.filter(t=>t.category==="design"));
+  const bldDays=spanDays(tasks.filter(t=>t.category!=="design"));
+  const latestEnd=tasks.length?tasks.reduce((m,t)=>t.end>m?t.end:m,tasks[0].end):null;
+  const nextStart=latestEnd?addDays(latestEnd,1):today;
+  const ROW_H=44,BAR_H=28,HEAD_H=60,SIDEBAR=156;
+  const timelineWidth=totalDays*dayWidth;
+  const timelineHeight=HEAD_H+sorted.length*ROW_H+20;
+  const todayOff=diffDays(minD,today)*dayWidth;
+
+  useEffect(()=>{if(ready&&scrollRef.current)scrollRef.current.scrollLeft=Math.max(0,todayOff-80);},[ready,activeId]);
+
+  const openNew=()=>{setEditingTaskId("new");setShowForm(true);};
+  const openEdit=id=>{setEditingTaskId(id);setShowForm(true);};
+  const closeForm=()=>{setShowForm(false);setEditingTaskId(null);};
+  const saveTask=task=>{if(editingTaskId==="new")setTasks(t=>[...t,{...task,id:uid()}]);else setTasks(t=>t.map(x=>x.id===editingTaskId?{...x,...task}:x));closeForm();};
+  const deleteTask=id=>{setTasks(t=>t.filter(x=>x.id!==id));setConfirmId(null);closeForm();};
+
+  const onPtrDown=(e,task,mode)=>{e.stopPropagation();e.preventDefault();dragRef.current={id:task.id,mode,startX:e.clientX,origStart:task.start,origEnd:task.end};window.addEventListener("pointermove",onPtrMove);window.addEventListener("pointerup",onPtrUp);};
+  const onPtrMove=useCallback(e=>{const g=dragRef.current;if(!g)return;const delta=Math.round((e.clientX-g.startX)/dayWidth);if(delta===g.last)return;g.last=delta;setTasks(ts=>ts.map(t=>{if(t.id!==g.id)return t;if(g.mode==="move")return{...t,start:addDays(g.origStart,delta),end:addDays(g.origEnd,delta)};if(g.mode==="l"){const ns=addDays(g.origStart,delta);return diffDays(ns,t.end)>=0?{...t,start:ns}:t;}if(g.mode==="r"){const ne=addDays(g.origEnd,delta);return diffDays(t.start,ne)>=0?{...t,end:ne}:t;}return t;}));},[dayWidth]);
+  const onPtrUp=useCallback(()=>{dragRef.current=null;window.removeEventListener("pointermove",onPtrMove);window.removeEventListener("pointerup",onPtrUp);},[onPtrMove]);
+
+  const projectList=Object.values(projects).sort((a,b)=>b.updatedAt>a.updatedAt?1:-1);
+
+  if(loading) return (
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",background:"#FFFFFF",flexDirection:"column",gap:12}}>
+      <Cloud size={28} style={{color:"#8B5CF6",opacity:.7}}/>
+      <p style={{fontSize:13,color:"#9B9A97",fontFamily:"system-ui"}}>從雲端載入資料中…</p>
+    </div>
+  );
+
+  return (
+    <div style={{fontFamily:"'Inter',system-ui,sans-serif",background:tk.bg,minHeight:"100vh",color:tk.text,transition:"background .2s,color .2s"}}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        .mono{font-family:'JetBrains Mono',monospace;}
+        ::-webkit-scrollbar{height:8px;width:8px;}
+        ::-webkit-scrollbar-thumb{background:${tk.border};border-radius:4px;}
+        .task-row:hover,.bar-row:hover{background:${tk.rowHover};}
+        input[type=range]{accent-color:#8B5CF6;}
+      `}</style>
+
+      {/* PROJECT DRAWER */}
+      {showProjects&&(
+        <div style={{position:"fixed",inset:0,zIndex:50,display:"flex"}}>
+          <div onClick={()=>setShowProjects(false)} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.3)"}}/>
+          <div style={{position:"relative",width:260,background:tk.bg,borderRight:`1px solid ${tk.border}`,height:"100%",display:"flex",flexDirection:"column",zIndex:1}}>
+            <div style={{padding:"16px 16px 12px",borderBottom:`1px solid ${tk.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+              <span style={{fontWeight:600,fontSize:14}}>專案列表</span>
+              <button onClick={()=>setShowProjects(false)} style={{background:"transparent",border:"none",cursor:"pointer",color:tk.textDim,display:"flex"}}><X size={16}/></button>
+            </div>
+            <div style={{flex:1,overflowY:"auto",padding:8}}>
+              {projectList.map(p=>(
+                <div key={p.id} onClick={()=>{setActiveId(p.id);setShowProjects(false);}} style={{display:"flex",alignItems:"center",gap:7,padding:"8px 10px",borderRadius:8,background:activeId===p.id?tk.surface:"transparent",marginBottom:3,cursor:"pointer"}}>
+                  <Folder size={14} style={{color:tk.textDim,flexShrink:0}}/>
+                  {renamingId===p.id?(
+                    <input autoFocus value={p.name}
+                      onChange={e=>setProjects(prev=>({...prev,[p.id]:{...prev[p.id],name:e.target.value}}))}
+                      onBlur={()=>setRenamingId(null)} onKeyDown={e=>{if(e.key==="Enter")setRenamingId(null);}}
+                      onClick={e=>e.stopPropagation()}
+                      style={{flex:1,fontSize:13,border:"none",outline:"none",background:"transparent",color:tk.text,fontFamily:"inherit"}}/>
+                  ):(
+                    <span style={{flex:1,fontSize:13,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:activeId===p.id?tk.text:tk.textMid}}>{p.name}</span>
+                  )}
+                  <button onClick={e=>{e.stopPropagation();setRenamingId(p.id);}} style={{background:"transparent",border:"none",cursor:"pointer",color:tk.textDim,display:"flex",padding:3,flexShrink:0}}><Pencil size={11}/></button>
+                  {Object.keys(projects).length>1&&(
+                    <button onClick={e=>{e.stopPropagation();deleteProject(p.id);}} style={{background:"transparent",border:"none",cursor:"pointer",color:tk.textDim,display:"flex",padding:3,flexShrink:0}}><Trash2 size={11}/></button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div style={{padding:12,borderTop:`1px solid ${tk.border}`,flexShrink:0}}>
+              <button onClick={createProject} style={{width:"100%",padding:"8px",border:`1px dashed ${tk.border}`,borderRadius:8,background:"transparent",cursor:"pointer",fontSize:13,color:tk.textMid,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                <Plus size={14}/>新增專案
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCatModal&&<CatModal tk={tk} dark={dark} customCats={customCats} setCustomCats={setCustomCats} onClose={()=>setShowCatModal(false)}/>}
+
+      {/* HEADER */}
+      <div style={{position:"sticky",top:0,zIndex:40,background:tk.headBg,borderBottom:`1px solid ${tk.border}`}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",height:52,gap:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+            <span style={{fontWeight:700,fontSize:17,letterSpacing:"-0.4px",color:dark?"#5B82E8":"#002FA7",flexShrink:0}}>ZenFlow</span>
+            <span style={{fontSize:11,fontWeight:500,color:dark?"#93B4F5":"#002FA7",background:dark?"rgba(91,130,232,0.15)":"rgba(0,47,167,0.08)",padding:"2px 8px",borderRadius:6,letterSpacing:"0.02em",flexShrink:0,fontFamily:"inherit"}}>Gantt</span>
+            <span style={{width:1,height:16,background:tk.border,flexShrink:0,marginLeft:2}}/>
+            <input value={projectName} onChange={e=>setProjectName(e.target.value)}
+              style={{fontWeight:600,fontSize:15,background:"transparent",border:"none",outline:"none",color:tk.text,minWidth:0,maxWidth:200,fontFamily:"inherit"}}/>
+            {(desDays>0||bldDays>0)&&(
+              <div style={{display:"flex",gap:8,fontFamily:"'JetBrains Mono',monospace",fontSize:11,flexShrink:0}}>
+                {desDays>0&&<span style={{color:"#8B5CF6"}}>設計 {desDays}d</span>}
+                {bldDays>0&&<span style={{color:tk.textMid}}>施工 {bldDays}d</span>}
+              </div>
+            )}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+            {/* 雲端儲存狀態 */}
+            {saveStatus&&(
+              <span style={{fontSize:11,color:saveStatus.includes("失敗")?"#EF4444":"#8B5CF6",fontFamily:"'JetBrains Mono',monospace",opacity:.8}}>{saveStatus}</span>
+            )}
+            <div style={{display:"flex",alignItems:"center",border:`1px solid ${tk.border}`,borderRadius:8,overflow:"hidden"}}>
+              <button onClick={()=>setDayWidth(w=>Math.max(12,w-6))} style={{padding:"5px 7px",background:"transparent",border:"none",cursor:"pointer",color:tk.textMid,display:"flex"}}><Minus size={12}/></button>
+              <input type="number" min={12} max={56} value={dayWidth}
+                onChange={e=>{const v=parseInt(e.target.value);if(!isNaN(v))setDayWidth(Math.min(56,Math.max(12,v)));}}
+                className="mono" style={{width:34,textAlign:"center",fontSize:11,color:tk.text,background:"transparent",border:"none",borderLeft:`1px solid ${tk.border}`,borderRight:`1px solid ${tk.border}`,outline:"none",padding:"5px 0"}}/>
+              <button onClick={()=>setDayWidth(w=>Math.min(56,w+6))} style={{padding:"5px 7px",background:"transparent",border:"none",cursor:"pointer",color:tk.textMid,display:"flex"}}><Plus size={12}/></button>
+            </div>
+            <button onClick={()=>setShowProjects(true)} title="專案列表" style={{padding:"5px 8px",background:tk.tagBg,border:`1px solid ${tk.border}`,borderRadius:8,cursor:"pointer",color:tk.textMid,display:"flex"}}><FolderOpen size={14}/></button>
+            <button onClick={()=>setShowCatModal(true)} title="管理分類" style={{padding:"5px 8px",background:tk.tagBg,border:`1px solid ${tk.border}`,borderRadius:8,cursor:"pointer",color:tk.textMid,display:"flex"}}><Settings size={14}/></button>
+            <button onClick={()=>exportJPG({sorted,allCats,minD,dayWidth,projectName,dark})} title="匯出 JPG" style={{padding:"5px 8px",background:tk.tagBg,border:`1px solid ${tk.border}`,borderRadius:8,cursor:"pointer",color:tk.textMid,display:"flex"}}><Download size={14}/></button>
+            <button onClick={()=>setDark(d=>!d)} style={{padding:"5px 8px",background:tk.tagBg,border:`1px solid ${tk.border}`,borderRadius:8,cursor:"pointer",color:tk.textMid,display:"flex"}}>{dark?<Sun size={14}/>:<Moon size={14}/>}</button>
+            <button onClick={openNew} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",background:dark?"#5B82E8":"#002FA7",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600}}>
+              <Plus size={14}/>新增
+            </button>
+          </div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:12,padding:"0 16px 10px",overflowX:"auto"}}>
+          {allCats.map(c=>(
+            <span key={c.key} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:tk.textDim,whiteSpace:"nowrap",fontFamily:"'JetBrains Mono',monospace",flexShrink:0}}>
+              <span style={{width:7,height:7,borderRadius:2,background:dark?c.dark[0]:c.light[0],display:"inline-block"}}/>{c.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* EMPTY */}
+      {tasks.length===0&&(
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 24px",gap:12,textAlign:"center"}}>
+          <div style={{width:44,height:44,borderRadius:10,background:tk.surface,display:"flex",alignItems:"center",justifyContent:"center"}}><FolderOpen size={20} style={{color:tk.textDim}}/></div>
+          <p style={{fontWeight:600,fontSize:15}}>尚無工項</p>
+          <p style={{fontSize:13,color:tk.textMid}}>點擊新增，開始排定工期</p>
+          <button onClick={openNew} style={{marginTop:8,padding:"8px 20px",background:dark?"#8B5CF6":"#1A1A1A",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:500}}>新增第一個工項</button>
+        </div>
+      )}
+
+      {/* MAIN */}
+      {tasks.length>0&&(
+        <div style={{display:"flex",height:"calc(100vh - 94px)"}}>
+          <div style={{width:SIDEBAR,flexShrink:0,borderRight:`1px solid ${tk.border}`,display:"flex",flexDirection:"column"}}>
+            <div style={{height:HEAD_H,display:"flex",alignItems:"flex-end",paddingBottom:10,paddingLeft:16,fontSize:11,fontWeight:500,color:tk.textDim,letterSpacing:.5,textTransform:"uppercase",borderBottom:`1px solid ${tk.border}`,background:tk.headBg,fontFamily:"'JetBrains Mono',monospace",flexShrink:0}}>工項</div>
+            <div style={{overflowY:"hidden",flex:1}}>
+              {sorted.map(t=>{const cat=catOf(t.category);const col=dark?cat.dark[0]:cat.light[0];const dur=diffDays(t.start,t.end)+1;return(
+                <div key={t.id} className="task-row" onClick={()=>openEdit(t.id)} style={{height:ROW_H,display:"flex",alignItems:"center",gap:8,paddingLeft:14,paddingRight:8,borderBottom:`1px solid ${tk.border}`,cursor:"pointer"}}>
+                  <span style={{width:3,height:20,borderRadius:2,background:col,flexShrink:0}}/>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:500,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:112}}>{t.name}</div>
+                    <div className="mono" style={{fontSize:10,color:tk.textDim,marginTop:1}}>{dur}天</div>
+                  </div>
+                </div>
+              );})}
+            </div>
+          </div>
+          <div ref={scrollRef} style={{flex:1,overflow:"auto"}} onClick={()=>setConfirmId(null)}>
+            <div style={{width:timelineWidth,height:timelineHeight,position:"relative",minHeight:"100%"}}>
+              {days.map((d,i)=>{const dt=parseISO(d);if(dt.getDay()!==0&&dt.getDay()!==6)return null;return <div key={i} style={{position:"absolute",left:i*dayWidth,top:0,width:dayWidth,height:timelineHeight,background:tk.weekend,zIndex:0}}/>;  })}
+              <div style={{position:"absolute",left:todayOff+dayWidth/2-.5,top:0,bottom:0,width:1,background:tk.today,zIndex:20,opacity:.65}}/>
+              <div style={{position:"absolute",left:todayOff,top:HEAD_H,width:dayWidth,bottom:0,background:tk.todayBg,zIndex:0}}/>
+              <div style={{position:"sticky",top:0,zIndex:30,height:HEAD_H,background:tk.headBg,borderBottom:`1px solid ${tk.border}`}}>
+                <div style={{display:"flex",height:26,borderBottom:`1px solid ${tk.border}`}}>
+                  {months.map((m,i)=>(
+                    <div key={i} style={{width:m.count*dayWidth,borderLeft:`1px solid ${tk.border}`,paddingLeft:8,display:"flex",alignItems:"center",fontSize:11,fontWeight:600,color:tk.text,whiteSpace:"nowrap",overflow:"hidden"}}>{m.label}</div>
+                  ))}
+                </div>
+                <div style={{display:"flex",height:34,alignItems:"center"}}>
+                  {days.map((d,i)=>{const dt=parseISO(d);const isToday=d===today;const we=dt.getDay()===0||dt.getDay()===6;const show=dayWidth>=18||dt.getDate()%2===0;return <div key={i} className="mono" style={{width:dayWidth,textAlign:"center",fontSize:10,color:isToday?tk.today:(we?tk.textDim:tk.textMid),fontWeight:isToday?700:400,flexShrink:0,userSelect:"none"}}>{show?dt.getDate():""}</div>;})}
+                </div>
+              </div>
+              {sorted.map((t,idx)=>{
+                const cat=catOf(t.category);const cols=dark?cat.dark:cat.light;
+                const left=diffDays(minD,t.start)*dayWidth;const w=(diffDays(t.start,t.end)+1)*dayWidth;
+                const top=HEAD_H+idx*ROW_H+(ROW_H-BAR_H)/2;const prog=t.progress||0;
+                return(
+                  <div key={t.id}>
+                    <div className="bar-row" style={{position:"absolute",left:0,top:HEAD_H+idx*ROW_H,width:timelineWidth,height:ROW_H,borderBottom:`1px solid ${tk.border}`,zIndex:1}}/>
+                    <div onPointerDown={e=>onPtrDown(e,t,"move")} onClick={()=>openEdit(t.id)}
+                      style={{position:"absolute",left,top,width:w,height:BAR_H,borderRadius:BAR_H/2,background:`linear-gradient(90deg,${cols[0]},${cols[1]})`,zIndex:10,cursor:"grab",boxShadow:dark?`0 1px 8px ${cols[0]}44`:`0 1px 4px ${cols[0]}38`,display:"flex",alignItems:"center",overflow:"hidden"}}
+                      onMouseEnter={e=>e.currentTarget.style.opacity=".85"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                      {prog>0&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${prog}%`,background:"rgba(255,255,255,0.25)",borderRadius:BAR_H/2}}/>}
+                      {w>50&&<span style={{position:"relative",zIndex:1,fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.95)",paddingLeft:12,paddingRight:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:w-16,textShadow:"0 1px 2px rgba(0,0,0,0.2)",userSelect:"none"}}>{t.name}</span>}
+                      <div onPointerDown={e=>onPtrDown(e,t,"l")} style={{position:"absolute",left:0,top:0,bottom:0,width:10,cursor:"ew-resize"}}/>
+                      <div onPointerDown={e=>onPtrDown(e,t,"r")} style={{position:"absolute",right:0,top:0,bottom:0,width:10,cursor:"ew-resize"}}/>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showForm&&<TaskForm initial={editingTaskId==="new"?null:tasks.find(t=>t.id===editingTaskId)} defaultStart={nextStart} dark={dark} tk={tk} allCats={allCats} onClose={closeForm} onSave={saveTask} onDelete={editingTaskId!=="new"?()=>setConfirmId(editingTaskId):null}/>}
+      {confirmId&&(
+        <div onClick={()=>setConfirmId(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:60,padding:16}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:tk.bg,border:`1px solid ${tk.border}`,borderRadius:12,padding:20,maxWidth:300,width:"100%"}}>
+            <p style={{fontSize:14,marginBottom:16}}>確定刪除「{tasks.find(t=>t.id===confirmId)?.name}」嗎？</p>
+            <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
+              <button onClick={()=>setConfirmId(null)} style={{padding:"6px 14px",border:`1px solid ${tk.border}`,borderRadius:8,background:"transparent",cursor:"pointer",fontSize:13,color:tk.text}}>取消</button>
+              <button onClick={()=>deleteTask(confirmId)} style={{padding:"6px 14px",border:"none",borderRadius:8,background:"#EF4444",color:"#fff",cursor:"pointer",fontSize:13}}>刪除</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── CatModal ──────────────────────────────────────────────────────────────────
+function CatModal({tk,dark,customCats,setCustomCats,onClose}){
+  const [label,setLabel]=useState("");const [color,setColor]=useState(PRESET_COLORS[0]);const [err,setErr]=useState(false);
+  const add=()=>{if(!label.trim()){setErr(true);return;}setCustomCats(c=>[...c,{key:"custom_"+uid(),label:label.trim(),light:color,dark:color}]);setLabel("");setErr(false);};
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.35)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:55,padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:tk.bg,border:`1px solid ${tk.border}`,borderRadius:14,padding:20,maxWidth:360,width:"100%",maxHeight:"80vh",overflowY:"auto"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+          <span style={{fontWeight:600,fontSize:15}}>管理分類</span>
+          <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",color:tk.textDim,display:"flex"}}><X size={18}/></button>
+        </div>
+        <p style={{fontSize:11,color:tk.textDim,fontFamily:"'JetBrains Mono',monospace",marginBottom:8}}>預設分類</p>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:16}}>{DEFAULT_CATS.map(c=>(
+          <span key={c.key} style={{display:"flex",alignItems:"center",gap:4,padding:"4px 9px",borderRadius:20,border:`1px solid ${tk.border}`,fontSize:12,color:tk.textMid}}>
+            <span style={{width:7,height:7,borderRadius:2,background:dark?c.dark[0]:c.light[0],display:"inline-block"}}/>{c.label}
+          </span>
+        ))}</div>
+        {customCats.length>0&&(<div style={{marginBottom:16}}>
+          <p style={{fontSize:11,color:tk.textDim,fontFamily:"'JetBrains Mono',monospace",marginBottom:8}}>自訂分類</p>
+          {customCats.map(c=>(
+            <div key={c.key} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:tk.surface,marginBottom:4}}>
+              <span style={{width:10,height:10,borderRadius:3,background:c.light[0],flexShrink:0}}/><span style={{flex:1,fontSize:13}}>{c.label}</span>
+              <button onClick={()=>setCustomCats(cs=>cs.filter(x=>x.key!==c.key))} style={{background:"transparent",border:"none",cursor:"pointer",color:tk.textDim,display:"flex"}}><Trash2 size={13}/></button>
+            </div>
+          ))}
+        </div>)}
+        <p style={{fontSize:11,color:tk.textDim,fontFamily:"'JetBrains Mono',monospace",marginBottom:8}}>新增自訂分類</p>
+        <input value={label} onChange={e=>{setLabel(e.target.value);setErr(false);}} placeholder="分類名稱"
+          style={{width:"100%",padding:"8px 12px",border:`1px solid ${err?"#EF4444":tk.border}`,borderRadius:8,fontSize:13,background:tk.surface,color:tk.text,outline:"none",marginBottom:8,fontFamily:"inherit"}}/>
+        <p style={{fontSize:11,color:tk.textDim,marginBottom:6}}>選擇顏色</p>
+        <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:12}}>{PRESET_COLORS.map((c,i)=>(
+          <button key={i} onClick={()=>setColor(c)} style={{width:26,height:26,borderRadius:7,background:c[0],border:color===c?`2.5px solid ${tk.text}`:"2.5px solid transparent",cursor:"pointer",padding:0}}/>
+        ))}</div>
+        <div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 12px",background:tk.surface,borderRadius:8,marginBottom:14}}>
+          <span style={{display:"inline-block",width:28,height:16,borderRadius:8,background:`linear-gradient(90deg,${color[0]},${color[1]})`}}/>
+          <span style={{fontSize:12,color:tk.textMid}}>{label||"分類名稱預覽"}</span>
+        </div>
+        <button onClick={add} style={{width:"100%",padding:"9px",background:dark?"#8B5CF6":"#1A1A1A",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Plus size={14}/>新增分類</button>
+      </div>
+    </div>
+  );
+}
+
+// ── TaskForm ──────────────────────────────────────────────────────────────────
+function TaskForm({initial,defaultStart,dark,tk,allCats,onClose,onSave,onDelete}){
+  const [name,setName]=useState(initial?.name||"");
+  const [category,setCategory]=useState(initial?.category||allCats[0]?.key||"other");
+  const [start,setStart]=useState(initial?.start||defaultStart||todayISO());
+  const [end,setEnd]=useState(initial?.end||addDays(initial?.start||defaultStart||todayISO(),2));
+  const [progress,setProgress]=useState(initial?.progress||0);
+  const [err,setErr]=useState(false);
+  const dur=Math.max(1,diffDays(start,end)+1);
+  const setDur=d=>setEnd(addDays(start,Math.max(1,d)-1));
+  const doSave=()=>{if(!name.trim()){setErr(true);return;}let s=start,e=end;if(diffDays(s,e)<0)e=s;onSave({name:name.trim(),category,start:s,end:e,progress:Number(progress)});};
+  return(
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.35)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:50}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:tk.bg,width:"100%",maxWidth:460,borderRadius:"16px 16px 0 0",padding:20,maxHeight:"90vh",overflowY:"auto",border:`1px solid ${tk.border}`,borderBottom:"none",fontFamily:"inherit"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
+          <span style={{fontWeight:600,fontSize:15}}>{initial?"編輯工項":"新增工項"}</span>
+          <button onClick={onClose} style={{background:"transparent",border:"none",cursor:"pointer",color:tk.textDim,display:"flex"}}><X size={18}/></button>
+        </div>
+        <label style={{display:"block",fontSize:11,color:tk.textDim,marginBottom:5,fontFamily:"'JetBrains Mono',monospace"}}>工項名稱</label>
+        <input value={name} onChange={e=>{setName(e.target.value);if(e.target.value.trim())setErr(false);}} placeholder="例如：客廳泥作"
+          style={{width:"100%",padding:"9px 12px",border:`1px solid ${err?"#EF4444":tk.border}`,borderRadius:8,fontSize:14,background:tk.surface,color:tk.text,outline:"none",marginBottom:err?4:14,fontFamily:"inherit"}}/>
+        {err&&<p style={{color:"#EF4444",fontSize:11,marginBottom:12}}>請填寫工項名稱</p>}
+        <label style={{display:"block",fontSize:11,color:tk.textDim,marginBottom:8,fontFamily:"'JetBrains Mono',monospace"}}>分類</label>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:16}}>{allCats.map(c=>{const col=dark?c.dark[0]:c.light[0];const sel=category===c.key;return(
+          <button type="button" key={c.key} onClick={()=>setCategory(c.key)}
+            style={{display:"flex",alignItems:"center",gap:5,padding:"5px 10px",borderRadius:20,fontSize:12,cursor:"pointer",fontWeight:sel?600:400,border:`1px solid ${sel?col:tk.border}`,background:sel?col+"18":"transparent",color:sel?col:tk.textMid}}>
+            <span style={{width:7,height:7,borderRadius:2,background:col,display:"inline-block"}}/>{c.label}
+          </button>);
+        })}</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+          <div><label style={{display:"block",fontSize:11,color:tk.textDim,marginBottom:5,fontFamily:"'JetBrains Mono',monospace"}}>開始</label><input type="date" value={start} onChange={e=>setStart(e.target.value)} style={{width:"100%",padding:"8px 10px",border:`1px solid ${tk.border}`,borderRadius:8,fontSize:13,background:tk.surface,color:tk.text,outline:"none",fontFamily:"'JetBrains Mono',monospace"}}/></div>
+          <div><label style={{display:"block",fontSize:11,color:tk.textDim,marginBottom:5,fontFamily:"'JetBrains Mono',monospace"}}>結束</label><input type="date" value={end} onChange={e=>setEnd(e.target.value)} style={{width:"100%",padding:"8px 10px",border:`1px solid ${tk.border}`,borderRadius:8,fontSize:13,background:tk.surface,color:tk.text,outline:"none",fontFamily:"'JetBrains Mono',monospace"}}/></div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16}}>
+          <span style={{fontSize:11,color:tk.textDim,fontFamily:"'JetBrains Mono',monospace"}}>工期</span>
+          <button onClick={()=>setDur(dur-1)} style={{width:28,height:28,border:`1px solid ${tk.border}`,borderRadius:7,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:tk.textMid}}><Minus size={12}/></button>
+          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,width:50,textAlign:"center",color:tk.text}}>{dur} 天</span>
+          <button onClick={()=>setDur(dur+1)} style={{width:28,height:28,border:`1px solid ${tk.border}`,borderRadius:7,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:tk.textMid}}><Plus size={12}/></button>
+        </div>
+        <label style={{display:"block",fontSize:11,color:tk.textDim,marginBottom:6,fontFamily:"'JetBrains Mono',monospace"}}>完成度 {progress}%</label>
+        <input type="range" min={0} max={100} step={5} value={progress} onChange={e=>setProgress(e.target.value)} style={{width:"100%",marginBottom:20}}/>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+          {onDelete?<button onClick={onDelete} style={{display:"flex",alignItems:"center",gap:5,fontSize:13,color:"#EF4444",background:"transparent",border:"none",cursor:"pointer"}}><Trash2 size={14}/>刪除</button>:<span/>}
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={onClose} style={{padding:"7px 16px",border:`1px solid ${tk.border}`,borderRadius:8,background:"transparent",cursor:"pointer",fontSize:13,color:tk.text}}>取消</button>
+            <button onClick={doSave} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 16px",border:"none",borderRadius:8,background:dark?"#8B5CF6":"#1A1A1A",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:600}}><Check size={14}/>儲存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<GanttPlanner/>);
+</script>
+</body>
+</html>
