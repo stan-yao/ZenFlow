@@ -124,8 +124,8 @@ function exportJPG({sorted,allCats,minD,dayWidth,projectName,dark}){
     ctx.fillStyle=tk.text;ctx.font="500 12px -apple-system,sans-serif";ctx.fillText(task.name,14,y+RH/2+1);
     ctx.fillStyle=tk.textDim;ctx.font="9px 'Courier New',monospace";ctx.fillText((diffDays(task.start,task.end)+1)+"天",14,y+RH/2+13);ctx.restore();
     const cols=dark?cat.dark:cat.light;const bx=SIDE+diffDays(minD,task.start)*DW;const bw=Math.max((diffDays(task.start,task.end)+1)*DW,6);const by=y+(RH-BAR_H)/2;
-    const grad=ctx.createLinearGradient(bx,0,bx+bw,0);grad.addColorStop(0,cols[0]);grad.addColorStop(1,cols[1]);ctx.fillStyle=grad;rrect(ctx,bx,by,bw,BAR_H,BAR_H/2);ctx.fill();
-    if(task.progress>0){ctx.fillStyle="rgba(255,255,255,0.25)";rrect(ctx,bx,by,bw*task.progress/100,BAR_H,BAR_H/2);ctx.fill();}
+    const grad=ctx.createLinearGradient(bx,0,bx+bw,0);grad.addColorStop(0,cols[0]);grad.addColorStop(1,cols[1]);ctx.fillStyle=grad;rrect(ctx,bx,by,bw,BAR_H,6);ctx.fill();
+    if(task.progress>0){ctx.fillStyle="rgba(255,255,255,0.25)";rrect(ctx,bx,by,bw*task.progress/100,BAR_H,6);ctx.fill();}
     if(bw>48){ctx.save();ctx.beginPath();ctx.rect(bx+8,by,bw-16,BAR_H);ctx.clip();ctx.fillStyle="rgba(255,255,255,0.92)";ctx.font="bold 10px -apple-system,sans-serif";ctx.shadowColor="rgba(0,0,0,0.2)";ctx.shadowBlur=2;ctx.fillText(task.name,bx+12,by+BAR_H/2+4);ctx.restore();}
   });
   const a=document.createElement("a");a.download=`${projectName}-工期表.jpg`;a.href=cv.toDataURL("image/jpeg",.95);a.click();
@@ -230,7 +230,7 @@ function GanttPlanner() {
   const sorted=[...tasks].sort((a,b)=>a.start===b.start?(a.end<b.end?-1:1):(a.start<b.start?-1:1));
   let minD=today,maxD=addDays(today,30);
   if(tasks.length){minD=tasks.reduce((m,t)=>t.start<m?t.start:m,tasks[0].start);maxD=tasks.reduce((m,t)=>t.end>m?t.end:m,tasks[0].end);}
-  minD=addDays(minD,-3);maxD=addDays(maxD,6);
+  minD=addDays(minD,-3);maxD=addDays(maxD,15);
   const totalDays=diffDays(minD,maxD)+1;
   const days=Array.from({length:totalDays},(_,i)=>addDays(minD,i));
   const months=[];
@@ -300,6 +300,14 @@ function GanttPlanner() {
         ::-webkit-scrollbar-thumb{background:${tk.border};border-radius:4px;}
         .task-row:hover,.bar-row:hover{background:${tk.rowHover};}
         input[type=range]{accent-color:#8B5CF6;}
+        @media(max-width:639px){
+          .h-zoom{display:none!important;}
+          .h-dl{display:none!important;}
+          .h-stats{display:none!important;}
+          .h-pname{max-width:100px!important;font-size:14px!important;}
+          .h-legend{padding:0 12px 7px!important;gap:8px!important;}
+          .h-legend>span{font-size:10px!important;}
+        }
       `}</style>
 
       {/* PROJECT DRAWER */}
@@ -349,21 +357,20 @@ function GanttPlanner() {
             <span style={{fontWeight:700,fontSize:17,letterSpacing:"-0.4px",color:dark?"#5B82E8":"#002FA7",flexShrink:0}}>ZenFlow</span>
             <span style={{fontSize:11,fontWeight:500,color:dark?"#93B4F5":"#002FA7",background:dark?"rgba(91,130,232,0.15)":"rgba(0,47,167,0.08)",padding:"2px 8px",borderRadius:6,letterSpacing:"0.02em",flexShrink:0,fontFamily:"inherit"}}>Gantt</span>
             <span style={{width:1,height:16,background:tk.border,flexShrink:0,marginLeft:2}}/>
-            <input value={projectName} onChange={e=>setProjectName(e.target.value)}
+            <input className="h-pname" value={projectName} onChange={e=>setProjectName(e.target.value)}
               style={{fontWeight:600,fontSize:15,background:"transparent",border:"none",outline:"none",color:tk.text,minWidth:0,maxWidth:200,fontFamily:"inherit"}}/>
             {(desDays>0||bldDays>0)&&(
-              <div style={{display:"flex",gap:8,fontFamily:"'JetBrains Mono',monospace",fontSize:11,flexShrink:0}}>
+              <div className="h-stats" style={{display:"flex",gap:8,fontFamily:"'JetBrains Mono',monospace",fontSize:11,flexShrink:0}}>
                 {desDays>0&&<span style={{color:"#8B5CF6"}}>設計 {desDays}d</span>}
                 {bldDays>0&&<span style={{color:tk.textMid}}>施工 {bldDays}d</span>}
               </div>
             )}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-            {/* 雲端儲存狀態 */}
             {saveStatus&&(
               <span style={{fontSize:11,color:saveStatus.includes("失敗")?"#EF4444":"#8B5CF6",fontFamily:"'JetBrains Mono',monospace",opacity:.8}}>{saveStatus}</span>
             )}
-            <div style={{display:"flex",alignItems:"center",border:`1px solid ${tk.border}`,borderRadius:8,overflow:"hidden"}}>
+            <div className="h-zoom" style={{display:"flex",alignItems:"center",border:`1px solid ${tk.border}`,borderRadius:8,overflow:"hidden"}}>
               <button onClick={()=>setDayWidth(w=>Math.max(12,w-6))} style={{padding:"5px 7px",background:"transparent",border:"none",cursor:"pointer",color:tk.textMid,display:"flex"}}><Minus size={12}/></button>
               <input type="number" min={12} max={56} value={dayWidth}
                 onChange={e=>{const v=parseInt(e.target.value);if(!isNaN(v))setDayWidth(Math.min(56,Math.max(12,v)));}}
@@ -372,14 +379,14 @@ function GanttPlanner() {
             </div>
             <button onClick={()=>setShowProjects(true)} title="專案列表" style={{padding:"5px 8px",background:tk.tagBg,border:`1px solid ${tk.border}`,borderRadius:8,cursor:"pointer",color:tk.textMid,display:"flex"}}><FolderOpen size={14}/></button>
             <button onClick={()=>setShowCatModal(true)} title="管理分類" style={{padding:"5px 8px",background:tk.tagBg,border:`1px solid ${tk.border}`,borderRadius:8,cursor:"pointer",color:tk.textMid,display:"flex"}}><Settings size={14}/></button>
-            <button onClick={()=>exportJPG({sorted,allCats,minD,dayWidth,projectName,dark})} title="匯出 JPG" style={{padding:"5px 8px",background:tk.tagBg,border:`1px solid ${tk.border}`,borderRadius:8,cursor:"pointer",color:tk.textMid,display:"flex"}}><Download size={14}/></button>
+            <button className="h-dl" onClick={()=>exportJPG({sorted,allCats,minD,dayWidth,projectName,dark})} title="匯出 JPG" style={{padding:"5px 8px",background:tk.tagBg,border:`1px solid ${tk.border}`,borderRadius:8,cursor:"pointer",color:tk.textMid,display:"flex"}}><Download size={14}/></button>
             <button onClick={()=>setDark(d=>!d)} style={{padding:"5px 8px",background:tk.tagBg,border:`1px solid ${tk.border}`,borderRadius:8,cursor:"pointer",color:tk.textMid,display:"flex"}}>{dark?<Sun size={14}/>:<Moon size={14}/>}</button>
             <button onClick={openNew} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",background:dark?"#5B82E8":"#002FA7",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600}}>
               <Plus size={14}/>新增
             </button>
           </div>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:12,padding:"0 16px 10px",overflowX:"auto"}}>
+        <div className="h-legend" style={{display:"flex",alignItems:"center",gap:12,padding:"0 16px 10px",overflowX:"auto"}}>
           {allCats.map(c=>(
             <span key={c.key} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:tk.textDim,whiteSpace:"nowrap",fontFamily:"'JetBrains Mono',monospace",flexShrink:0}}>
               <span style={{width:7,height:7,borderRadius:2,background:dark?c.dark[0]:c.light[0],display:"inline-block"}}/>{c.label}
@@ -440,8 +447,8 @@ function GanttPlanner() {
                     <div className="bar-row" style={{position:"absolute",left:0,top:HEAD_H+idx*ROW_H,width:timelineWidth,height:ROW_H,borderBottom:`1px solid ${tk.border}`,zIndex:1}}/>
                     <div
                       onMouseDown={makeDrag(t,"move")}
-                      style={{position:"absolute",left,top,width:w,height:BAR_H,borderRadius:BAR_H/2,background:`linear-gradient(90deg,${cols[0]},${cols[1]})`,zIndex:10,cursor:"grab",boxShadow:dark?`0 1px 8px ${cols[0]}44`:`0 1px 4px ${cols[0]}38`,display:"flex",alignItems:"center",overflow:"hidden",userSelect:"none"}}>
-                      {prog>0&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${prog}%`,background:"rgba(255,255,255,0.25)",borderRadius:BAR_H/2}}/>}
+                      style={{position:"absolute",left,top,width:w,height:BAR_H,borderRadius:6,background:`linear-gradient(90deg,${cols[0]},${cols[1]})`,zIndex:10,cursor:"grab",boxShadow:dark?`0 1px 8px ${cols[0]}44`:`0 1px 4px ${cols[0]}38`,display:"flex",alignItems:"center",overflow:"hidden",userSelect:"none"}}>
+                      {prog>0&&<div style={{position:"absolute",left:0,top:0,bottom:0,width:`${prog}%`,background:"rgba(255,255,255,0.25)",borderRadius:6}}/>}
                       {!shortBar&&<span style={{position:"relative",zIndex:1,fontSize:11,fontWeight:600,color:"rgba(255,255,255,0.95)",paddingLeft:12,paddingRight:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:w-16,textShadow:"0 1px 2px rgba(0,0,0,0.2)",userSelect:"none",pointerEvents:"none"}}>{t.name}</span>}
                       <div onMouseDown={makeDrag(t,"l")} style={{position:"absolute",left:0,top:0,bottom:0,width:12,cursor:"ew-resize",zIndex:2}}/>
                       <div onMouseDown={makeDrag(t,"r")} style={{position:"absolute",right:0,top:0,bottom:0,width:12,cursor:"ew-resize",zIndex:2}}/>
