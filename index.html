@@ -3,7 +3,47 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>工期甘特圖</title>
+  <title>ZenFlow Gantt</title>
+  <meta name="description" content="ZenFlow Gantt — 室內設計工期排程工具"/>
+  <meta name="theme-color" content="#5FD6FF"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-title" content="ZenFlow"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <link rel="icon" type="image/png" href="icon.png"/>
+  <link rel="apple-touch-icon" sizes="180x180" href="icon.png"/>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const manifest = {
+        name:'ZenFlow Gantt', short_name:'ZenFlow',
+        description:'室內設計工期排程工具',
+        start_url:'.', display:'standalone',
+        background_color:'#ffffff', theme_color:'#5FD6FF',
+        icons:[
+          {src:'icon.png', sizes:'512x512', type:'image/png'}
+        ]
+      };
+      const ml = document.createElement('link'); ml.rel='manifest';
+      ml.href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(manifest));
+      document.head.appendChild(ml);
+    });
+  </script>
+    // 產生 ZenFlow Gantt 圖示（Klein Blue 背景 + 白色甘特條）
+    window.addEventListener('DOMContentLoaded', () => {
+      const fi = document.createElement('link'); fi.rel='icon'; fi.type='image/png'; fi.href=_icon; document.head.appendChild(fi);
+      const ai = document.createElement('link'); ai.rel='apple-touch-icon'; ai.sizes='180x180'; ai.href=_icon; document.head.appendChild(ai);
+      const manifest = {
+        name:'ZenFlow Gantt', short_name:'ZenFlow',
+        description:'室內設計工期排程工具',
+        start_url:'.', display:'standalone',
+        background_color:'#ffffff', theme_color:'#5FD6FF',
+        icons:[{src:_icon,sizes:'512x512',type:'image/png'}]
+      };
+      const ml = document.createElement('link'); ml.rel='manifest';
+      ml.href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(manifest));
+      document.head.appendChild(ml);
+    });
+  </script>
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -354,8 +394,8 @@ function GanttPlanner() {
       <div style={{position:"sticky",top:0,zIndex:40,background:tk.headBg,borderBottom:`1px solid ${tk.border}`}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",height:52,gap:10}}>
           <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
-            <span style={{fontWeight:700,fontSize:17,letterSpacing:"-0.4px",color:dark?"#5B82E8":"#002FA7",flexShrink:0}}>ZenFlow</span>
-            <span style={{fontSize:11,fontWeight:500,color:dark?"#93B4F5":"#002FA7",background:dark?"rgba(91,130,232,0.15)":"rgba(0,47,167,0.08)",padding:"2px 8px",borderRadius:6,letterSpacing:"0.02em",flexShrink:0,fontFamily:"inherit"}}>Gantt</span>
+            <span style={{fontWeight:700,fontSize:17,letterSpacing:"-0.4px",color:dark?"#5FD6FF":"#5FD6FF",flexShrink:0}}>ZenFlow</span>
+            <span style={{fontSize:11,fontWeight:500,color:dark?"#5FD6FF":"#5FD6FF",background:dark?"rgba(95,214,255,0.15)":"rgba(95,214,255,0.08)",padding:"2px 8px",borderRadius:6,letterSpacing:"0.02em",flexShrink:0,fontFamily:"inherit"}}>Gantt</span>
             <span style={{width:1,height:16,background:tk.border,flexShrink:0,marginLeft:2}}/>
             <input className="h-pname" value={projectName} onChange={e=>setProjectName(e.target.value)}
               style={{fontWeight:600,fontSize:15,background:"transparent",border:"none",outline:"none",color:tk.text,minWidth:0,maxWidth:200,fontFamily:"inherit"}}/>
@@ -381,7 +421,7 @@ function GanttPlanner() {
             <button onClick={()=>setShowCatModal(true)} title="管理分類" style={{padding:"5px 8px",background:tk.tagBg,border:`1px solid ${tk.border}`,borderRadius:8,cursor:"pointer",color:tk.textMid,display:"flex"}}><Settings size={14}/></button>
             <button className="h-dl" onClick={()=>exportJPG({sorted,allCats,minD,dayWidth,projectName,dark})} title="匯出 JPG" style={{padding:"5px 8px",background:tk.tagBg,border:`1px solid ${tk.border}`,borderRadius:8,cursor:"pointer",color:tk.textMid,display:"flex"}}><Download size={14}/></button>
             <button onClick={()=>setDark(d=>!d)} style={{padding:"5px 8px",background:tk.tagBg,border:`1px solid ${tk.border}`,borderRadius:8,cursor:"pointer",color:tk.textMid,display:"flex"}}>{dark?<Sun size={14}/>:<Moon size={14}/>}</button>
-            <button onClick={openNew} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",background:dark?"#5B82E8":"#002FA7",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600}}>
+            <button onClick={openNew} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",background:"#5FD6FF",color:"#1A1A1A",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600}}>
               <Plus size={14}/>新增
             </button>
           </div>
@@ -525,7 +565,7 @@ function CatModal({tk,dark,customCats,setCustomCats,onClose}){
             </span>
             <span style={{fontSize:11,color:tk.textDim}}>← 預覽</span>
           </div>
-          <button onClick={add} style={{width:"100%",padding:"9px",background:dark?"#5B82E8":"#002FA7",color:"#fff",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Plus size={14}/>新增分類</button>
+          <button onClick={add} style={{width:"100%",padding:"9px",background:"#5FD6FF",color:"#1A1A1A",border:"none",borderRadius:8,cursor:"pointer",fontSize:13,fontWeight:600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Plus size={14}/>新增分類</button>
         </div>
       </div>
     </div>
