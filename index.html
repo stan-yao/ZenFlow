@@ -440,7 +440,7 @@ function GanttPlanner() {
           </div>
         </div>
         {/* ── 手機第二行：tab + 次要按鈕 ── */}
-        <div className="h-row2" style={{display:"none",borderBottom:`1px solid ${tk.border}`,padding:"5px 12px",gap:6,alignItems:"center",background:tk.headBg}}>
+        <div className="h-row2" style={{display:"none",borderBottom:`1px solid ${tk.border}`,padding:"8px 12px 16px",gap:6,alignItems:"center",background:tk.headBg}}>
           <div style={{display:"flex",border:`1px solid ${tk.border}`,borderRadius:8,overflow:"hidden"}}>
             <button onClick={()=>setView("gantt")} style={{padding:"5px 16px",fontSize:12,fontWeight:view==="gantt"?600:400,background:view==="gantt"?tk.surface:"transparent",border:"none",cursor:"pointer",color:view==="gantt"?tk.text:tk.textMid}}>甘特圖</button>
             <button onClick={()=>setView("budget")} style={{padding:"5px 16px",fontSize:12,fontWeight:view==="budget"?600:400,background:view==="budget"?tk.surface:"transparent",border:"none",cursor:"pointer",color:view==="budget"?tk.text:tk.textMid,borderLeft:`1px solid ${tk.border}`}}>代墊款</button>
@@ -450,7 +450,7 @@ function GanttPlanner() {
           <button onClick={()=>setShowCatModal(true)} style={{padding:"6px 8px",background:"transparent",border:"none",cursor:"pointer",color:tk.textMid,display:"flex"}}><Settings size={15}/></button>
           <button onClick={()=>setDark(d=>!d)} style={{padding:"6px 8px",background:"transparent",border:"none",cursor:"pointer",color:tk.textMid,display:"flex"}}>{dark?<Sun size={15}/>:<Moon size={15}/>}</button>
         </div>
-        <div className="h-legend" style={{display:view==="budget"?"none":"flex"}} style={{display:"flex",alignItems:"center",gap:12,padding:"0 16px 10px",overflowX:"auto"}}>
+        <div className="h-legend" style={{display:view==="budget"?"none":"flex",alignItems:"center",gap:12,padding:"0 16px 10px",overflowX:"auto"}}>
           {allCats.map(c=>(
             <span key={c.key} style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:tk.textDim,whiteSpace:"nowrap",fontFamily:"'JetBrains Mono',monospace",flexShrink:0}}>
               <span style={{width:7,height:7,borderRadius:2,background:dark?c.dark[0]:c.light[0],display:"inline-block"}}/>{c.label}
@@ -659,7 +659,7 @@ function BudgetView({tk,dark,expenses,payerColor,allPayers,onAdd,onEdit}){
   const sorted=[...expenses].sort((a,b)=>b.date.localeCompare(a.date));
   const total=expenses.reduce((s,e)=>s+Number(e.amount||0),0);
   return(
-    <div style={{padding:"16px",maxWidth:680,margin:"0 auto"}}>
+    <div style={{padding:"20px 16px",maxWidth:680,margin:"0 auto"}}>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
         {allPayers.map(p=>{
           const col=payerColor(p);
