@@ -42,3 +42,10 @@ npm run dev
 Node 測試涵蓋資料不變性、讀取零寫入、儲存佇列、衝突、重試、復原、回收、日期與依賴。正式 adapter 使用模擬 Firestore 交易測試，不對正式專案執行測試寫入。實機 iOS 觸控手勢與真實多人網路併發需另行驗證。
 
 API 依據：[Firestore transactions](https://firebase.google.com/docs/firestore/manage-data/transactions)、[realtime listeners](https://firebase.google.com/docs/firestore/query-data/listen)。
+
+## v9.1 介面調整（2026-11-05）
+
+- 移除重複大標題，摘要縮成一列；桌機搜尋與工種篩選合併，減少留白。
+- 工項列 46px、日期列 52px；加入可退出的專注模式，保留原本縮放與篩選功能。
+- 深色模式使用中性深灰 #1c1c1c / #242424 / #2d2d2d，文字與分隔線亦改為中性灰。
+- 15 個預設分類改為低飽和配色；專案 categoryColors 及 customCats 自訂色仍優先，不修改雲端資料。

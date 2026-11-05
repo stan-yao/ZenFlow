@@ -50,7 +50,7 @@ export function reschedule(tasks, calendar={}) {
   result.forEach(visit);return result;
 }
 export const BASE_CATS = [
- ['design','設計','#8B5CF6'],['demo','拆除','#DC5555'],['mason','泥作','#A16207'],['mep','水電','#2563EB'],['wood','木作','#B45309'],['iron','鐵件','#475569'],['glass','玻璃','#0284C7'],['paint','油漆','#059669'],['furn','系統櫃','#DB2777'],['partition','輕隔間','#EA580C'],['light','燈具','#A18206'],['sign','招牌','#E11D48'],['floor','地坪','#78716C'],['clean','清潔','#0D9488'],['soft','傢飾軟裝','#9333EA']
+ ['design','設計','#8A80A3'],['demo','拆除','#B9827C'],['mason','泥作','#A29376'],['mep','水電','#7792AF'],['wood','木作','#AF9278'],['iron','鐵件','#84909B'],['glass','玻璃','#7D9EA9'],['paint','油漆','#859D87'],['furn','系統櫃','#AE8599'],['partition','輕隔間','#B3977D'],['light','燈具','#B3A16E'],['sign','招牌','#AB8389'],['floor','地坪','#96918A'],['clean','清潔','#7F9D99'],['soft','傢飾軟裝','#9C87AA']
 ].map(([key,label,color])=>({key,label,light:[color,color],dark:[color,color]}));
 export function categories(project) {
   const cats=[...BASE_CATS,...(project.customCats||[])].map(c=>({...c,color:project.categoryColors?.[c.key]||c.light?.[0]||c.dark?.[0]||'#64748b'}));
