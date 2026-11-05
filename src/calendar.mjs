@@ -1,0 +1,2 @@
+import {addDays,dateOf,diffDays} from './core.mjs';
+export function monthDays(anchor){const first=anchor.slice(0,7)+'-01';const start=addDays(first,-((dateOf(first).getDay()+6)%7));const next=new Date(dateOf(first));next.setMonth(next.getMonth()+1);const end=addDays(next.getFullYear()+'-'+String(next.getMonth()+1).padStart(2,'0')+'-01',-1);return Array.from({length:Math.ceil((diffDays(start,end)+1)/7)*7},(_,i)=>addDays(start,i));}

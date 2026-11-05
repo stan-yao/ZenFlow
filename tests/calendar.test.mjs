@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {monthDays} from '../src/calendar.mjs';
+test('calendar preserves leap day and complete Monday to Sunday weeks',()=>{const d=monthDays('2028-02-15');assert.ok(d.includes('2028-02-29'));assert.equal(d[0],'2028-01-31');assert.equal(d.at(-1),'2028-03-05');assert.equal(d.length%7,0);});
+test('six-week month and year boundary include every date once',()=>{const d=monthDays('2026-11-05');assert.equal(d.length,42);assert.equal(new Set(d).size,42);assert.equal(d[0],'2026-10-26');assert.equal(d.at(-1),'2026-12-06');const jan=monthDays('2027-01-01');assert.equal(jan[0],'2026-12-28');assert.ok(jan.includes('2027-01-31'));});

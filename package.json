@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "html2canvas": "^1.4.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -7,7 +8,7 @@
     "esbuild": "^0.28.2"
   },
   "name": "zenflow-gantt",
-  "version": "9.2.0",
+  "version": "9.3.0",
   "private": true,
   "type": "module",
   "scripts": {
