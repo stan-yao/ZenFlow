@@ -7,7 +7,7 @@
     "esbuild": "^0.28.2"
   },
   "name": "zenflow-gantt",
-  "version": "9.1.0",
+  "version": "9.2.0",
   "private": true,
   "type": "module",
   "scripts": {

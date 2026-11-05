@@ -50,14 +50,16 @@ export function reschedule(tasks, calendar={}) {
   result.forEach(visit);return result;
 }
 export const BASE_CATS = [
- ['design','設計','#8A80A3'],['demo','拆除','#B9827C'],['mason','泥作','#A29376'],['mep','水電','#7792AF'],['wood','木作','#AF9278'],['iron','鐵件','#84909B'],['glass','玻璃','#7D9EA9'],['paint','油漆','#859D87'],['furn','系統櫃','#AE8599'],['partition','輕隔間','#B3977D'],['light','燈具','#B3A16E'],['sign','招牌','#AB8389'],['floor','地坪','#96918A'],['clean','清潔','#7F9D99'],['soft','傢飾軟裝','#9C87AA']
+ ['design','設計','#8455EA'],['demo','拆除','#FD9467'],['mason','泥作','#C6A16C'],['mep','水電','#1AAEFC'],['wood','木作','#F2A03D'],['iron','鐵件','#808A9B'],['glass','玻璃','#C8F0FD'],['paint','油漆','#8AE71A'],['furn','系統櫃','#F8C8F4'],['partition','輕隔間','#FFCEB9'],['light','燈具','#FBF955'],['sign','招牌','#E95669'],['floor','地坪','#AAB5C3'],['clean','清潔','#ADD9C6'],['soft','傢飾軟裝','#809FE9']
 ].map(([key,label,color])=>({key,label,light:[color,color],dark:[color,color]}));
 export function categories(project) {
   const cats=[...BASE_CATS,...(project.customCats||[])].map(c=>({...c,color:project.categoryColors?.[c.key]||c.light?.[0]||c.dark?.[0]||'#64748b'}));
   for(const t of project.tasks||[])if(!cats.some(c=>c.key===t.category))cats.push({key:t.category,label:'未分類（保留原分類）',color:'#64748b'});
   return cats;
 }
-export function textOn(hex) {const rgb=hex.replace('#','').match(/../g)?.map(x=>parseInt(x,16)/255)||[0,0,0];const l=rgb.map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return .2126*l[0]+.7152*l[1]+.0722*l[2]>.179?'#172024':'#ffffff';}
+export function luminance(hex){const rgb=hex.replace('#','').match(/../g)?.map(x=>parseInt(x,16)/255)||[0,0,0];const l=rgb.map(x=>x<=.04045?x/12.92:((x+.055)/1.055)**2.4);return .2126*l[0]+.7152*l[1]+.0722*l[2];}
+export function contrast(a,b){const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
+export function textOn(hex){const dark='#13131a';if(contrast(hex,dark)>=4.5)return dark;if(contrast(hex,'#ffffff')>=4.5)return '#ffffff';return '#000000';}
 export function demoProjects() {
  const start=today();const t=(name,category,offset,days,progress)=>({id:uid(),name,category,start:addDays(start,offset),end:addDays(start,offset+days-1),progress});
  return {'demo-home':{name:'日光寓所｜示範專案',tasks:[t('平面配置與設計確認','design',-6,7,100),t('材料選樣與設備確認','design',0,5,40),t('保護工程與現場放樣','demo',3,3,0),t('水電配管與線路配置','mep',6,6,0),t('浴室防水與泥作工程','mason',10,8,0),t('木作天花與收納櫃製作','wood',16,9,0),t('油漆與細部修整','paint',24,5,0),t('燈具安裝與完工清潔','clean',29,3,0)],expenses:[{id:uid(),item:'保護材料',date:start,payer:'設計師',amount:2800}],customCats:[]}};
