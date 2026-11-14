@@ -1,0 +1,1 @@
+document.addEventListener('click',e=>{for(const el of document.querySelectorAll('.tool-switcher[open]'))if(!el.contains(e.target))el.open=false;});document.addEventListener('keydown',e=>{if(e.key==='Escape')for(const el of document.querySelectorAll('.tool-switcher[open]')){el.open=false;el.querySelector('summary').focus();}});

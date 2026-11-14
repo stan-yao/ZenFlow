@@ -1,6 +1,7 @@
 import {clone,fingerprint,demoProjects} from './core.mjs';
 import config from './firebase-config.js';
-export const isDemo=location.hostname!=='stan-yao.github.io'||!location.pathname.startsWith('/ZenFlow/')||new URLSearchParams(location.search).has('demo');
+export function isProductionLocation(loc){return (loc.hostname==='zenflow.zenordesign.workers.dev'||(loc.hostname==='stan-yao.github.io'&&loc.pathname.startsWith('/ZenFlow/')))&&!new URLSearchParams(loc.search).has('demo');}
+export const isDemo=!isProductionLocation(location);
 const conflict=remote=>Object.assign(Error('其他人已更新此專案；你的草稿已保留，尚未覆寫雲端。'),{code:'conflict',remote});
 const DEMO_KEY='zenflow-v9-demo';
 function script(src){return new Promise((resolve,reject)=>{const el=document.createElement('script');el.src=src;el.onload=resolve;el.onerror=()=>reject(Error('雲端連線元件載入失敗'));document.head.append(el);});}

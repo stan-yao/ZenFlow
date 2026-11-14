@@ -1,6 +1,6 @@
 # ZenFlow v9
 
-室內設計工期排程與代墊款工作台。正式網站：https://stan-yao.github.io/ZenFlow/
+室內設計工期排程與代墊款工作台。正式網站：https://zenflow.zenordesign.workers.dev/
 
 ## 開發
 
@@ -11,7 +11,7 @@ npm run build
 npm run dev
 ```
 
-本機預覽 http://127.0.0.1:4173 使用獨立示範資料；開發伺服器以 CSP `connect-src 'none'` 阻擋對外資料連線。只有 `stan-yao.github.io/ZenFlow/` 正式路徑才會初始化 Firebase；正式網址附加 `?demo` 亦只使用本機示範資料。
+本機預覽 http://127.0.0.1:4173 使用獨立示範資料；開發伺服器以 CSP `connect-src 'none'` 阻擋對外資料連線。正式 Cloudflare 網域及相容舊 GitHub 路徑才會初始化 Firebase；正式網址附加 `?demo` 亦只使用本機示範資料。
 
 建置產出 `assets/app.js`、`assets/app.css`，首頁帶內容雜湊版本碼以避免舊快取。發布 GitHub Pages 前須執行建置並提交產物。React 預先打包，不再於使用者瀏覽器即時編譯 JSX。
 
@@ -49,3 +49,11 @@ API 依據：[Firestore transactions](https://firebase.google.com/docs/firestore
 - 工項列 46px、日期列 52px；加入可退出的專注模式，保留原本縮放與篩選功能。
 - 深色模式使用中性深灰 #1c1c1c / #242424 / #2d2d2d，文字與分隔線亦改為中性灰。
 - 15 個預設分類改為低飽和配色；專案 categoryColors 及 customCats 自訂色仍優先，不修改雲端資料。
+
+## Cloudflare 與工具整合（2026-11-14）
+- 原版 v9.3 UI、Firebase 專案及資料保持；左上角 Logo 切換 ZenFlow／ZenCost。帳號與資料庫不合併，ZenCost 仍需登入。
+- `app.html` 是甘特圖首頁模板；`npm run build` 產出 `cloudflare-public/` 專供 Cloudflare，`index.html` 固定為 GitHub 舊址跳轉按鈕，不可覆寫回甘特圖。
+- `wrangler deploy` 使用本目錄 wrangler.jsonc，網站為 zenflow.zenordesign.workers.dev；僅部署 public 成品，不上傳 Git、原始碼或任何記錄。
+- `npm run build` 後 `npm run dev` 是隔離示範，禁止連線 Firebase。
+- 切換工具沿用 beforeunload 的未儲存提醒；新網域裝置偏好會重新建立，雲端排程不需要搬資料。
+- GitHub main 推送更新舊址入口；Cloudflare 由 Wrangler 手動部署，不與 GitHub 推送自動連動。
