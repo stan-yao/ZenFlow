@@ -1,6 +1,6 @@
 import {clone,fingerprint,demoProjects} from './core.mjs';
 import config from './firebase-config.js';
-export function isProductionLocation(loc){return (loc.hostname==='zenflow.zenordesign.workers.dev'||(loc.hostname==='stan-yao.github.io'&&loc.pathname.startsWith('/ZenFlow/')))&&!new URLSearchParams(loc.search).has('demo');}
+export function isProductionLocation(loc){return ((loc.hostname==='zenorhub.pages.dev'&&loc.pathname.startsWith('/flow/'))||loc.hostname==='zenflow.zenordesign.workers.dev'||(loc.hostname==='stan-yao.github.io'&&loc.pathname.startsWith('/ZenFlow/')))&&!new URLSearchParams(loc.search).has('demo');}
 export const isDemo=!isProductionLocation(location);
 const conflict=remote=>Object.assign(Error('其他人已更新此專案；你的草稿已保留，尚未覆寫雲端。'),{code:'conflict',remote});
 const DEMO_KEY='zenflow-v9-demo';

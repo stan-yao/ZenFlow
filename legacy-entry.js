@@ -1,0 +1,1 @@
+export default {fetch(req,env){const u=new URL(req.url);if(['GET','HEAD'].includes(req.method)&&['/','/index.html'].includes(u.pathname))return new Response(null,{status:302,headers:{Location:'https://zenorhub.pages.dev/flow/'+u.search,'Cache-Control':'no-store'}});return env.ASSETS.fetch(req);}};

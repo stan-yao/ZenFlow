@@ -4,9 +4,12 @@
   "account_id": "316c94a33cfde62a5f4319d5f7c8118d",
   "workers_dev": true,
   "assets": {
-    "directory": "./cloudflare-public"
+    "directory": "./cloudflare-public",
+    "binding": "ASSETS",
+    "run_worker_first": true
   },
   "observability": {
     "enabled": false
-  }
+  },
+  "main": "legacy-entry.js"
 }
