@@ -1,1 +1,26 @@
 .tool-switcher{position:relative;flex-shrink:0}.tool-switcher>summary{list-style:none;cursor:pointer;user-select:none}.tool-switcher>summary::-webkit-details-marker{display:none}.tool-switcher>summary:focus-visible{outline:2px solid #58cde0;outline-offset:4px;border-radius:4px}.tool-switcher .tool-links{position:absolute;top:calc(100% + 12px);left:0;z-index:100;min-width:225px;padding:6px;background:var(--surface,#fff);border:1px solid var(--line,#e4e8e2);border-radius:12px;box-shadow:0 12px 35px #0002}.tool-switcher .tool-links a{display:flex;align-items:center;gap:14px;padding:12px;border-radius:7px;color:var(--text,#27332f);text-decoration:none;font-size:14px;font-weight:600;letter-spacing:0}.tool-switcher .tool-links a small{font-size:11px;font-weight:400;color:var(--muted,#68736c)}.tool-switcher .tool-links a:hover,.tool-switcher .tool-links a:focus-visible{background:var(--soft,#f3f5f2)}.tool-switcher .tool-links a[aria-current=page]{background:var(--accent-soft,#e7f5f5)}
+/* Shared company header: desktop and mobile use identical brand geometry. */
+:is(.app-shell,#application)>.app-header{height:48px;min-height:48px;padding:0 16px;gap:12px;box-sizing:border-box;font-family:Inter,"Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft JhengHei",sans-serif}
+.app-header .identity{gap:12px;min-width:0;flex:1}
+.app-header .tool-switcher>summary.logo{display:flex;align-items:center;justify-content:flex-start;min-height:44px;width:156px;gap:8px;margin:0;padding:0;font-size:22px;font-weight:750;line-height:1;letter-spacing:-1px;color:var(--text);text-decoration:none}
+.app-header .tool-switcher>summary.logo>span{display:inline-block;font-size:9px;font-weight:500;line-height:1.3;letter-spacing:.3px;border:1px solid var(--line);border-radius:4px;padding:2px 4px;color:var(--muted)}
+.app-header .tool-switcher>summary.logo::after{content:"";width:6px;height:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(45deg);margin-left:auto;margin-right:5px;margin-top:-4px;flex-shrink:0}
+.app-header .tool-switcher[open]>summary.logo::after{transform:rotate(225deg);margin-top:3px}
+.app-header .tool-switcher .tool-links{top:calc(100% + 4px);font-family:inherit}
+.app-header .tool-switcher .tool-links a{min-height:46px}
+.app-header .divider,.app-header .header-divider{height:22px;width:1px;background:var(--line);flex-shrink:0}
+.app-header .header-actions{gap:8px;flex-shrink:0}
+.app-header .header-actions>.icon-button,.app-header .header-actions>.menu-anchor>.icon-button{height:36px;min-height:36px;width:36px;padding:0;border:1px solid var(--line);border-radius:9px;background:var(--surface)}
+@media(max-width:720px){
+ :is(.app-shell,#application)>.app-header{height:calc(56px + env(safe-area-inset-top));min-height:calc(56px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 12px 0;gap:8px}
+ .app-header .identity{gap:8px}
+ .app-header .tool-switcher>summary.logo{width:112px;font-size:22px;min-height:44px}
+ .app-header .tool-switcher>summary.logo>span{display:none!important}
+ .app-header .tool-switcher .tool-links{top:calc(100% + 4px);min-width:230px;max-width:calc(100vw - 24px)}
+ .app-header .tool-switcher .tool-links a{min-height:48px;padding:12px}
+ .app-header .header-actions{gap:4px}
+ .app-header .header-actions>.icon-button,.app-header .header-actions>.menu-anchor>.icon-button{width:44px;height:44px;min-height:44px;border:0;border-radius:12px;background:var(--soft)}
+ .app-header .divider,.app-header .header-divider{display:none}
+ .app-header .project-switch{min-width:0;max-width:none;flex:1;padding:0;font-size:12px}
+ .app-header .project-switch>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
